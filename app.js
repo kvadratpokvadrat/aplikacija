@@ -3,7 +3,7 @@ import {
   getAuth,
   signInWithEmailAndPassword,
   onAuthStateChanged,
-  signOut
+  signOut,
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 import {
   getFirestore,
@@ -14,514 +14,618 @@ import {
   doc,
   updateDoc,
   getDocs,
+  getDoc,
   query,
-  where
+  where,
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
+/** =======================
+ *  FIREBASE CONFIG
+ *  ======================= */
 const firebaseConfig = {
   apiKey: "AIzaSyBt7ZmogAfvQrp2TZ-TaT8haZO-Q5BUrkY",
   authDomain: "evidencija-1b5b1.firebaseapp.com",
   projectId: "evidencija-1b5b1",
   storageBucket: "evidencija-1b5b1.firebasestorage.app",
   messagingSenderId: "375704932512",
-  appId: "1:375704932512:web:e893c08cd9b702f7ba39c5"
+  appId: "1:375704932512:web:e893c08cd9b702f7ba39c5",
 };
-
-// UBACI ADMIN MEJLOVE
-const ADMIN_EMAILS = [
-  // "stefanbarac@gmail.com",
-];
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const addCall = document.getElementById("addCall");
-const search = document.getElementById("search");
-const statsDiv = document.getElementById("stats");
-const monthPick = document.getElementById("monthPick");
-const monthToday = document.getElementById("monthToday");
-const sortBy = document.getElementById("sortBy");
-const whoami = document.getElementById("whoami");
+/** =======================
+ *  ADMIN LIST (EDIT THIS)
+ *  ======================= */
+const ADMIN_EMAILS = [
+  "stefanbarac@gmail.com", // <- promeni na tvoj admin email
+];
 
-const datumPoziva = document.getElementById("datumPoziva");
-const ponudaAgent = document.getElementById("ponudaAgent");
+/** =======================
+ *  HELPERS
+ *  ======================= */
+const AGENTS = ["Marija", "Slavko", "Jovan"];
 
-const datumTeren = document.getElementById("datumTeren");
-const vremeTeren = document.getElementById("vremeTeren");
+function isAdminEmail(email) {
+  return ADMIN_EMAILS.map((e) => e.toLowerCase().trim()).includes(String(email || "").toLowerCase().trim());
+}
 
-const manualFieldBtn = document.getElementById("manualField");
-const manualModal = document.getElementById("manualModal");
-const saveManualField = document.getElementById("saveManualField");
-const cancelManualField = document.getElementById("cancelManualField");
-
-const mIme = document.getElementById("mIme");
-const mDatumTeren = document.getElementById("mDatumTeren");
-const mVremeTeren = document.getElementById("mVremeTeren");
-const mIshodTeren = document.getElementById("mIshodTeren");
-const mRadniNalog = document.getElementById("mRadniNalog");
-
-// State
-let selectedCall = null;
-let currentUser = null;
-let isAdmin = false;
-
-// ===== Helpers =====
-function todayISO() {
-  const d = new Date();
-  const yyyy = d.getFullYear();
+function toYMD(d) {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  return `${d.getFullYear()}-${mm}-${dd}`;
 }
-
-function monthISO(d = new Date()) {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  return `${yyyy}-${mm}`;
+function toHM(d) {
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
 }
-
-function defaultTime() {
-  // promeni ako hoćeš trenutno vreme umesto fiksno
-  return "10:00";
+function monthKeyFromYMD(ymd) {
+  // "2026-03-02" -> "2026-03"
+  if (!ymd || typeof ymd !== "string") return "";
+  return ymd.slice(0, 7);
 }
-
-function inSelectedMonth(dateStr, monthStr) {
-  if (!dateStr) return false;
-  return String(dateStr).startsWith(monthStr); // "YYYY-MM"
-}
-
-function safeLower(x) {
-  return String(x ?? "").toLowerCase();
-}
-
-// Defaulti
-datumPoziva.value = todayISO();
-datumTeren.value = todayISO();
-vremeTeren.value = defaultTime();
-monthPick.value = monthISO();
-
-mDatumTeren.value = todayISO();
-mVremeTeren.value = defaultTime();
-
-// ===== Auth =====
-loginBtn.onclick = () => {
-  signInWithEmailAndPassword(auth, email.value, password.value);
-};
-
-logoutBtn.onclick = async () => {
-  await signOut(auth);
-};
-
-onAuthStateChanged(auth, (user) => {
-  currentUser = user;
-  if (user) {
-    isAdmin = ADMIN_EMAILS.includes(user.email || "");
-    whoami.textContent = `${user.email}${isAdmin ? " (ADMIN)" : ""}`;
-    logoutBtn.style.display = "inline-block";
-
-    login.style.display = "none";
-    appDiv.style.display = "block";
-
-    // uvek danas na ulazu
-    datumPoziva.value = todayISO();
-    datumTeren.value = todayISO();
-    vremeTeren.value = defaultTime();
-    monthPick.value = monthISO();
-
-    wireUI();
-    loadAll();
-  } else {
-    isAdmin = false;
-    whoami.textContent = "";
-    logoutBtn.style.display = "none";
-
-    appDiv.style.display = "none";
-    login.style.display = "block";
-  }
-});
-
-// ===== UI wiring =====
-function wireUI() {
-  monthToday.onclick = () => {
-    monthPick.value = monthISO();
-    refreshAllViews();
-  };
-
-  monthPick.onchange = refreshAllViews;
-  sortBy.onchange = refreshAllViews;
-
-  cancelField.onclick = () => {
-    modal.style.display = "none";
-    selectedCall = null;
-  };
-
-  search.oninput = () => {
-    refreshCallsTableOnly();
-  };
-
-  manualFieldBtn.onclick = () => {
-    mIme.value = "";
-    mDatumTeren.value = todayISO();
-    mVremeTeren.value = defaultTime();
-    mIshodTeren.value = "";
-    mRadniNalog.checked = false;
-
-    // samo admin može čekirati RN
-    mRadniNalog.disabled = !isAdmin;
-
-    manualModal.style.display = "block";
-  };
-
-  cancelManualField.onclick = () => {
-    manualModal.style.display = "none";
-  };
-
-  saveManualField.onclick = saveManualFieldVisit;
-}
-
-// ===== Data caches =====
-let callsCache = [];   // {id, ...data}
-let fieldsCache = [];  // {id, ...data}
-
-async function loadAll() {
-  loadCallsLive();
-  loadFieldsLive();
-  await refreshAllViews();
-}
-
-function refreshAllViews() {
-  refreshCallsTableOnly();
-  refreshFieldsTableOnly();
-  statsAndChart();
-}
-
-// ===== CALLS =====
-async function addNewCall() {
-  // duplikat telefon
-  const q1 = query(collection(db, "calls"), where("telefon", "==", telefon.value));
-  const snap = await getDocs(q1);
-  if (!snap.empty) {
-    alert("Telefon postoji!");
-    return;
-  }
-
-  const gen = ponudaAgent.value || "";
-
-  await addDoc(collection(db, "calls"), {
-    ime: ime.value,
-    sifra: sifra.value,
-    adresa: adresa.value,
-    telefon: telefon.value,
-    datumPoziva: datumPoziva.value || todayISO(),
-
-    // samo "Generisao ponudu"
-    ponudaAgent: gen,
-
-    // kompatibilnost (da ti ne puca logika gde se koristi agent)
-    agent: gen,
-
-    ishod: ishod.value,
-    teren: false,
-
-    statusPoziva: false
-  });
-
-  // reset (datum ostaje)
-  ime.value = "";
-  sifra.value = "";
-  adresa.value = "";
-  telefon.value = "";
-  ishod.value = "";
-  ponudaAgent.value = "";
-}
-
-addCall.onclick = addNewCall;
-
-function loadCallsLive() {
-  onSnapshot(collection(db, "calls"), (snap) => {
-    callsCache = [];
-    snap.forEach((docu) => callsCache.push({ id: docu.id, ...docu.data() }));
-    refreshCallsTableOnly();
-    statsAndChart();
-  });
-}
-
-function sortItems(items) {
-  const v = sortBy.value;
-  const [field, dir] = v.split("_");
-  const mul = dir === "asc" ? 1 : -1;
-
-  items.sort((a, b) => {
-    const av = a[field];
-    const bv = b[field];
-
-    if (typeof av === "boolean" || typeof bv === "boolean") {
-      return (Number(av) - Number(bv)) * mul;
-    }
-
-    if (field.includes("datum")) {
-      return String(av ?? "").localeCompare(String(bv ?? "")) * mul;
-    }
-
-    return String(av ?? "").localeCompare(String(bv ?? "")) * mul;
-  });
-
-  return items;
-}
-
-function refreshCallsTableOnly() {
-  const monthStr = monthPick.value; // YYYY-MM
-  const q = safeLower(search.value);
-
-  let filtered = callsCache.filter((c) => inSelectedMonth(c.datumPoziva, monthStr));
-
-  if (q) {
-    filtered = filtered.filter((c) => {
-      const all = `${c.ime} ${c.sifra} ${c.telefon} ${c.ponudaAgent} ${c.ishod} ${c.datumPoziva}`.toLowerCase();
-      return all.includes(q);
-    });
-  }
-
-  sortItems(filtered);
-
-  callsTable.innerHTML = "";
-  filtered.forEach((c) => {
-    const statusBadge = c.teren ? `<span class="badge ok">Zakazan</span>` : `<span class="badge">-</span>`;
-    const pozivBadge = c.statusPoziva ? `<span class="badge ok">Čekirano</span>` : `<span class="badge no">Nije</span>`;
-
-    const statusCheckbox = isAdmin
-      ? `<input type="checkbox" ${c.statusPoziva ? "checked" : ""} onchange="window.toggleCallStatus('${c.id}', this.checked)">`
-      : (c.statusPoziva ? "✅" : "—");
-
-    const delBtn = isAdmin
-      ? `<button class="danger" onclick="window.delDoc('calls','${c.id}')">X</button>`
-      : "";
-
-    const outcomeInput = isAdmin
-      ? `<input value="${c.ishod ?? ""}" onchange="window.updateCallOutcome('${c.id}', this.value)">`
-      : `<input value="${c.ishod ?? ""}" disabled>`;
-
-    callsTable.innerHTML += `
-      <tr class="${c.teren ? "green" : ""}">
-        <td>${c.ime ?? ""}</td>
-        <td>${c.sifra ?? ""}</td>
-        <td>${c.telefon ?? ""}</td>
-        <td>${c.ponudaAgent ?? ""}</td>
-        <td>${outcomeInput}</td>
-        <td>${statusCheckbox}</td>
-        <td>${statusBadge} ${pozivBadge}</td>
-        <td>
-          <button onclick="window.schedule('${c.id}')">Teren</button>
-          ${delBtn}
-        </td>
-      </tr>
-    `;
-  });
-}
-
-window.updateCallOutcome = async (id, val) => {
-  if (!isAdmin) return;
-  await updateDoc(doc(db, "calls", id), { ishod: val });
-};
-
-window.toggleCallStatus = async (id, checked) => {
-  if (!isAdmin) return;
-  await updateDoc(doc(db, "calls", id), { statusPoziva: !!checked });
-};
-
-window.schedule = (id) => {
-  selectedCall = id;
-  datumTeren.value = todayISO();
-  vremeTeren.value = defaultTime();
-  modal.style.display = "block";
-};
-
-confirmField.onclick = async () => {
-  if (!selectedCall) return;
-
-  const single = await getDocs(query(collection(db, "calls"), where("__name__", "==", selectedCall)));
-  if (single.empty) {
-    alert("Ne mogu da nađem poziv.");
-    return;
-  }
-
-  const data = single.docs[0].data();
-  const agentVal = data.ponudaAgent ?? data.agent ?? "";
-
-  await addDoc(collection(db, "fieldVisits"), {
-    ime: data.ime ?? "",
-    datumTeren: datumTeren.value || todayISO(),
-    vremeTeren: vremeTeren.value || defaultTime(),
-    ishodTeren: "",
-    agent: agentVal,
-    radniNalog: false
-  });
-
-  await updateDoc(doc(db, "calls", selectedCall), { teren: true });
-
-  modal.style.display = "none";
-  selectedCall = null;
-};
-
-// ===== FIELDS =====
-function loadFieldsLive() {
-  onSnapshot(collection(db, "fieldVisits"), (snap) => {
-    fieldsCache = [];
-    snap.forEach((docu) => fieldsCache.push({ id: docu.id, ...docu.data() }));
-    refreshFieldsTableOnly();
-    statsAndChart();
-  });
-}
-
-function refreshFieldsTableOnly() {
-  const monthStr = monthPick.value;
-
-  const filtered = fieldsCache
-    .filter((f) => inSelectedMonth(f.datumTeren, monthStr))
-    .sort((a, b) => String(b.datumTeren ?? "").localeCompare(String(a.datumTeren ?? "")));
-
-  fieldTable.innerHTML = "";
-  filtered.forEach((f) => {
-    const rn = isAdmin
-      ? `<input type="checkbox" ${f.radniNalog ? "checked" : ""} onchange="window.toggleRadniNalog('${f.id}', this.checked)">`
-      : (f.radniNalog ? "✅" : "—");
-
-    const delBtn = isAdmin
-      ? `<button class="danger" onclick="window.delDoc('fieldVisits','${f.id}')">X</button>`
-      : "";
-
-    const outcomeInput = isAdmin
-      ? `<input value="${f.ishodTeren ?? ""}" onchange="window.updateFieldOutcome('${f.id}', this.value)">`
-      : `<input value="${f.ishodTeren ?? ""}" disabled>`;
-
-    fieldTable.innerHTML += `
-      <tr>
-        <td>${f.ime ?? ""}</td>
-        <td>${f.datumTeren ?? ""}</td>
-        <td>${f.vremeTeren ?? ""}</td>
-        <td>${outcomeInput}</td>
-        <td>${rn}</td>
-        <td>${delBtn}</td>
-      </tr>
-    `;
-  });
-}
-
-window.updateFieldOutcome = async (id, val) => {
-  if (!isAdmin) return;
-  await updateDoc(doc(db, "fieldVisits", id), { ishodTeren: val });
-};
-
-window.toggleRadniNalog = async (id, checked) => {
-  if (!isAdmin) return;
-  await updateDoc(doc(db, "fieldVisits", id), { radniNalog: !!checked });
-};
-
-window.delDoc = async (col, id) => {
-  if (!isAdmin) return;
-  await deleteDoc(doc(db, col, id));
-};
-
-// ===== Manual field save =====
-async function saveManualFieldVisit() {
-  const imeVal = (mIme.value || "").trim();
-  if (!imeVal) { alert("Upiši ime."); return; }
-
-  await addDoc(collection(db, "fieldVisits"), {
-    ime: imeVal,
-    datumTeren: mDatumTeren.value || todayISO(),
-    vremeTeren: mVremeTeren.value || defaultTime(),
-    ishodTeren: mIshodTeren.value || "",
-    radniNalog: isAdmin ? !!mRadniNalog.checked : false
-  });
-
-  manualModal.style.display = "none";
-}
-
-// ===== STATS + CHART =====
-async function statsAndChart() {
-  const monthStr = monthPick.value;
-
-  const callsMonth = callsCache.filter((c) => inSelectedMonth(c.datumPoziva, monthStr));
-  const fieldsMonth = fieldsCache.filter((f) => inSelectedMonth(f.datumTeren, monthStr));
-
-  const realizedFields = fieldsMonth.length;
-  const conversion = callsMonth.length ? ((fieldsMonth.length / callsMonth.length) * 100).toFixed(1) : "0.0";
-
-  statsDiv.innerHTML = `
-    <div class="stat">
-      <div class="small">Pozivi (${monthStr})</div>
-      <div style="font-size:34px;font-weight:700">${callsMonth.length}</div>
-    </div>
-    <div class="stat">
-      <div class="small">Realizovani tereni (${monthStr})</div>
-      <div style="font-size:34px;font-weight:700">${realizedFields}</div>
-    </div>
-    <div class="stat">
-      <div class="small">Konverzija (${monthStr})</div>
-      <div style="font-size:34px;font-weight:700">${conversion}%</div>
-    </div>
-  `;
-
-  drawChartByMonths();
-}
-
-function drawChartByMonths() {
-  const canvas = document.getElementById("chart");
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+function currentMonthKey() {
   const now = new Date();
-  const months = [];
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push(monthISO(d)); // "YYYY-MM"
-  }
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+function monthRangeFromMonthKey(key /* YYYY-MM */) {
+  const [y, m] = key.split("-").map((x) => parseInt(x, 10));
+  const start = new Date(y, m - 1, 1);
+  const end = new Date(y, m, 0); // last day
+  return { start: toYMD(start), end: toYMD(end) };
+}
 
-  const counts = months.map((m) => fieldsCache.filter((f) => inSelectedMonth(f.datumTeren, m)).length);
-  const max = Math.max(1, ...counts);
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+function escapeAttr(str) {
+  return escapeHtml(str).replaceAll("\n", " ");
+}
 
+function drawBarChart(canvas, labels, values) {
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
   const W = canvas.width;
   const H = canvas.height;
-  const padL = 40, padR = 10, padT = 20, padB = 40;
+
+  // clear
+  ctx.clearRect(0, 0, W, H);
+
+  // padding
+  const padL = 40, padR = 20, padT = 20, padB = 30;
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
 
+  // axes
   ctx.beginPath();
   ctx.moveTo(padL, padT);
   ctx.lineTo(padL, padT + chartH);
   ctx.lineTo(padL + chartW, padT + chartH);
-  ctx.strokeStyle = "#cbd5e1";
+  ctx.strokeStyle = "#111827";
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  const n = months.length;
-  const gap = 6;
-  const barW = (chartW - gap * (n - 1)) / n;
+  const maxVal = Math.max(1, ...values);
+  const barCount = Math.max(1, values.length);
+  const gap = 8;
+  const barW = Math.max(6, Math.floor((chartW - gap * (barCount - 1)) / barCount));
 
-  counts.forEach((val, i) => {
+  // bars
+  values.forEach((v, i) => {
     const x = padL + i * (barW + gap);
-    const h = (val / max) * chartH;
-    const y = padT + (chartH - h);
+    const h = Math.round((v / maxVal) * chartH);
+    const y = padT + chartH - h;
 
     ctx.fillStyle = "#2563eb";
     ctx.fillRect(x, y, barW, h);
 
-    ctx.fillStyle = "#0f172a";
-    ctx.font = "10px Segoe UI";
-    ctx.fillText(months[i].slice(5), x + 2, padT + chartH + 14);
+    // value
+    ctx.fillStyle = "#111827";
+    ctx.font = "12px Segoe UI";
+    ctx.textAlign = "center";
+    ctx.fillText(String(v), x + barW / 2, y - 6);
 
-    ctx.fillStyle = "#0f172a";
+    // label
+    ctx.fillStyle = "#334155";
     ctx.font = "11px Segoe UI";
-    ctx.fillText(String(val), x + 2, y - 4);
+    ctx.textAlign = "center";
+    const lbl = labels[i] || "";
+    ctx.fillText(lbl, x + barW / 2, padT + chartH + 18);
   });
-
-  ctx.fillStyle = "#0f172a";
-  ctx.font = "12px Segoe UI";
-  ctx.fillText("Tereni po mesecima (poslednjih 12)", padL, 14);
 }
 
+/** =======================
+ *  APP STATE
+ *  ======================= */
+let state = {
+  user: null,
+  isAdmin: false,
+  selectedMonth: currentMonthKey(), // YYYY-MM
+  selectedCallId: null,
+  calls: [], // current month calls
+  fields: [], // current month fields
+};
+
+/** =======================
+ *  DOM + BOOTSTRAP
+ *  ======================= */
+document.addEventListener("DOMContentLoaded", () => {
+  // ---- DOM refs
+  const login = document.getElementById("login");
+  const appDiv = document.getElementById("app");
+
+  const email = document.getElementById("email");
+  const password = document.getElementById("password");
+  const loginBtn = document.getElementById("loginBtn");
+
+  const whoami = document.getElementById("whoami");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  const monthPick = document.getElementById("monthPick");
+  const monthToday = document.getElementById("monthToday");
+  const sortBy = document.getElementById("sortBy");
+
+  const statsEl = document.getElementById("stats");
+  const chartCanvas = document.getElementById("chart");
+
+  const ime = document.getElementById("ime");
+  const sifra = document.getElementById("sifra");
+  const adresa = document.getElementById("adresa");
+  const telefon = document.getElementById("telefon");
+  const datumPoziva = document.getElementById("datumPoziva");
+  const ponudaAgent = document.getElementById("ponudaAgent");
+  const ishod = document.getElementById("ishod");
+  const addCall = document.getElementById("addCall");
+
+  const search = document.getElementById("search");
+  const callsTable = document.getElementById("callsTable");
+
+  const fieldTable = document.getElementById("fieldTable");
+  const manualField = document.getElementById("manualField");
+
+  // modal (call -> field)
+  const modal = document.getElementById("modal");
+  const datumTeren = document.getElementById("datumTeren");
+  const vremeTeren = document.getElementById("vremeTeren");
+  const confirmField = document.getElementById("confirmField");
+  const cancelField = document.getElementById("cancelField");
+
+  // manual modal
+  const manualModal = document.getElementById("manualModal");
+  const mIme = document.getElementById("mIme");
+  const mDatumTeren = document.getElementById("mDatumTeren");
+  const mVremeTeren = document.getElementById("mVremeTeren");
+  const mIshodTeren = document.getElementById("mIshodTeren");
+  const mRadniNalog = document.getElementById("mRadniNalog");
+  const saveManualField = document.getElementById("saveManualField");
+  const cancelManualField = document.getElementById("cancelManualField");
+
+  // defaults
+  datumPoziva.value = toYMD(new Date());
+  monthPick.value = state.selectedMonth;
+
+  // ===== AUTH UI
+  loginBtn.addEventListener("click", async () => {
+    try {
+      await signInWithEmailAndPassword(auth, email.value, password.value);
+    } catch (e) {
+      alert(e?.message || "Login greška");
+    }
+  });
+
+  logoutBtn.addEventListener("click", async () => {
+    await signOut(auth);
+  });
+
+  onAuthStateChanged(auth, (user) => {
+    state.user = user;
+    state.isAdmin = !!user && isAdminEmail(user.email);
+
+    if (user) {
+      login.style.display = "none";
+      appDiv.style.display = "block";
+      logoutBtn.style.display = "inline-block";
+      whoami.textContent = `${user.email}${state.isAdmin ? " (ADMIN)" : ""}`;
+      bootSubscriptions(); // start listeners
+    } else {
+      appDiv.style.display = "none";
+      login.style.display = "block";
+      logoutBtn.style.display = "none";
+      whoami.textContent = "";
+      // ne čistimo state, ali UI svakako ide na login
+    }
+  });
+
+  // ===== MONTH / SORT / SEARCH
+  monthPick.addEventListener("change", () => {
+    state.selectedMonth = monthPick.value || currentMonthKey();
+    bootSubscriptions(); // restart queries for new month
+  });
+
+  monthToday.addEventListener("click", () => {
+    state.selectedMonth = currentMonthKey();
+    monthPick.value = state.selectedMonth;
+    bootSubscriptions();
+  });
+
+  sortBy.addEventListener("change", () => {
+    renderCalls();
+  });
+
+  search.addEventListener("input", () => {
+    renderCalls();
+  });
+
+  // ===== ADD CALL
+  addCall.addEventListener("click", async () => {
+    const tel = (telefon.value || "").trim();
+    if (!tel) return alert("Unesi telefon.");
+    if (!datumPoziva.value) return alert("Unesi datum poziva.");
+
+    // duplikat po telefonu (globalno)
+    const qDup = query(collection(db, "calls"), where("telefon", "==", tel));
+    const snapDup = await getDocs(qDup);
+    if (!snapDup.empty) return alert("Telefon već postoji!");
+
+    await addDoc(collection(db, "calls"), {
+      ime: (ime.value || "").trim(),
+      sifra: (sifra.value || "").trim(),
+      adresa: (adresa.value || "").trim(),
+      telefon: tel,
+      datumPoziva: datumPoziva.value,
+      ponudaAgent: ponudaAgent.value || "",
+      ishod: (ishod.value || "").trim(),
+      teren: false,
+      statusPoziva: false,
+      createdAt: Date.now(),
+    });
+
+    // opciono očisti polja
+    // ime.value = sifra.value = adresa.value = telefon.value = ishod.value = "";
+  });
+
+  // ===== MODAL: schedule field from call
+  function openScheduleModal(callId) {
+    state.selectedCallId = callId;
+    modal.style.display = "block";
+    const now = new Date();
+    datumTeren.value = toYMD(now);
+    vremeTeren.value = "10:00";
+  }
+  function closeScheduleModal() {
+    modal.style.display = "none";
+    state.selectedCallId = null;
+  }
+  cancelField.addEventListener("click", closeScheduleModal);
+
+  confirmField.addEventListener("click", async () => {
+    if (!state.selectedCallId) return;
+
+    if (!datumTeren.value) return alert("Unesi datum terena.");
+    if (!vremeTeren.value) return alert("Unesi vreme terena.");
+
+    const callRef = doc(db, "calls", state.selectedCallId);
+    const callSnap = await getDoc(callRef);
+    if (!callSnap.exists()) {
+      alert("Poziv ne postoji (obrisan).");
+      closeScheduleModal();
+      return;
+    }
+
+    const c = callSnap.data();
+
+    // veza poziv -> teren + kopiranje ključnih podataka
+    await addDoc(collection(db, "fieldVisits"), {
+      callId: state.selectedCallId,
+      ime: c.ime || "",
+      sifra: c.sifra || "",
+      telefon: c.telefon || "",
+      ponudaAgent: c.ponudaAgent || "",
+      datumTeren: datumTeren.value,
+      vremeTeren: vremeTeren.value,
+      ishodTeren: "",
+      radniNalog: false,
+      createdAt: Date.now(),
+    });
+
+    await updateDoc(callRef, { teren: true });
+
+    closeScheduleModal();
+  });
+
+  // ===== MANUAL FIELD MODAL
+  function openManualModal() {
+    manualModal.style.display = "block";
+    const now = new Date();
+    mDatumTeren.value = toYMD(now);
+    mVremeTeren.value = "10:00";
+    mIme.value = "";
+    mIshodTeren.value = "";
+    mRadniNalog.checked = false;
+  }
+  function closeManualModal() {
+    manualModal.style.display = "none";
+  }
+  manualField.addEventListener("click", openManualModal);
+  cancelManualField.addEventListener("click", closeManualModal);
+
+  saveManualField.addEventListener("click", async () => {
+    if (!mIme.value.trim()) return alert("Unesi ime.");
+    if (!mDatumTeren.value) return alert("Unesi datum.");
+    if (!mVremeTeren.value) return alert("Unesi vreme.");
+
+    await addDoc(collection(db, "fieldVisits"), {
+      callId: "", // ručno nema veze
+      ime: mIme.value.trim(),
+      sifra: "",
+      telefon: "",
+      ponudaAgent: "",
+      datumTeren: mDatumTeren.value,
+      vremeTeren: mVremeTeren.value,
+      ishodTeren: (mIshodTeren.value || "").trim(),
+      radniNalog: !!mRadniNalog.checked,
+      createdAt: Date.now(),
+    });
+
+    closeManualModal();
+  });
+
+  // ===== FIRESTORE SUBSCRIPTIONS (restarted on month change)
+  let unsubCalls = null;
+  let unsubFields = null;
+
+  function bootSubscriptions() {
+    // stop previous
+    if (typeof unsubCalls === "function") unsubCalls();
+    if (typeof unsubFields === "function") unsubFields();
+
+    const { start, end } = monthRangeFromMonthKey(state.selectedMonth);
+
+    // Calls only for selected month
+    const callsQ = query(
+      collection(db, "calls"),
+      where("datumPoziva", ">=", start),
+      where("datumPoziva", "<=", end)
+    );
+
+    unsubCalls = onSnapshot(callsQ, (snap) => {
+      state.calls = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderCalls();
+      renderStats();
+    });
+
+    // Fields only for selected month
+    const fieldsQ = query(
+      collection(db, "fieldVisits"),
+      where("datumTeren", ">=", start),
+      where("datumTeren", "<=", end)
+    );
+
+    unsubFields = onSnapshot(fieldsQ, (snap) => {
+      state.fields = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderFields();
+      renderStats();
+    });
+
+    // chart counts by months (all time)
+    renderChartAllMonths().catch(() => {});
+  }
+
+  /** ===== RENDER: CALLS ===== */
+  function sortCalls(arr) {
+    const mode = sortBy.value || "datumPoziva_desc";
+    const copy = [...arr];
+
+    const get = (o, k) => String(o?.[k] ?? "").toLowerCase();
+
+    copy.sort((a, b) => {
+      const [key, dir] = mode.split("_"); // e.g. datumPoziva_desc
+      let va = "", vb = "";
+
+      if (key === "datumPoziva") { va = a.datumPoziva || ""; vb = b.datumPoziva || ""; }
+      else if (key === "ime") { va = get(a, "ime"); vb = get(b, "ime"); }
+      else if (key === "telefon") { va = get(a, "telefon"); vb = get(b, "telefon"); }
+      else if (key === "statusPoziva") {
+        // true prvo ili false prvo
+        va = a.statusPoziva ? "1" : "0";
+        vb = b.statusPoziva ? "1" : "0";
+      }
+
+      if (va < vb) return dir === "asc" ? -1 : 1;
+      if (va > vb) return dir === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return copy;
+  }
+
+  function renderCalls() {
+    const q = (search.value || "").toLowerCase().trim();
+
+    let filtered = state.calls;
+    if (q) {
+      filtered = filtered.filter((c) => {
+        const hay = [
+          c.ime, c.sifra, c.telefon, c.ponudaAgent, c.ishod
+        ].join(" ").toLowerCase();
+        return hay.includes(q);
+      });
+    }
+
+    const sorted = sortCalls(filtered);
+
+    callsTable.innerHTML = "";
+    sorted.forEach((c) => {
+      const terenBadge = c.teren ? `<span class="badge ok">Zakazan</span>` : `<span class="badge">-</span>`;
+      const statusBadge = c.statusPoziva ? `<span class="badge ok">Čekirano</span>` : `<span class="badge no">Nije</span>`;
+
+      const statusInput = state.isAdmin
+        ? `<input type="checkbox" ${c.statusPoziva ? "checked" : ""} onchange="window._toggleStatusPoziva('${c.id}', this.checked)">`
+        : `<span class="small">—</span>`;
+
+      const delBtn = state.isAdmin
+        ? `<button class="danger" onclick="window._del('calls','${c.id}')">X</button>`
+        : ``;
+
+      callsTable.innerHTML += `
+        <tr class="${c.teren ? "green" : ""}">
+          <td>${escapeHtml(c.ime || "")}</td>
+          <td>${escapeHtml(c.sifra || "")}</td>
+          <td>${escapeHtml(c.telefon || "")}</td>
+          <td>${escapeHtml(c.ponudaAgent || "")}</td>
+          <td><input value="${escapeAttr(c.ishod || "")}" onchange="window._updateCallIshod('${c.id}', this.value)"></td>
+          <td style="text-align:center">${statusInput}</td>
+          <td>${terenBadge} ${statusBadge}</td>
+          <td>
+            <button onclick="window._schedule('${c.id}')">Teren</button>
+            ${delBtn}
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  /** ===== RENDER: FIELDS ===== */
+  function renderFields() {
+    fieldTable.innerHTML = "";
+
+    // sortiraj po datumu/vremenu
+    const arr = [...state.fields].sort((a, b) => {
+      const da = (a.datumTeren || "") + " " + (a.vremeTeren || "");
+      const db2 = (b.datumTeren || "") + " " + (b.vremeTeren || "");
+      return db2.localeCompare(da);
+    });
+
+    arr.forEach((f) => {
+      const rn = !!f.radniNalog;
+      const rnCell = state.isAdmin
+        ? `<input type="checkbox" ${rn ? "checked" : ""} onchange="window._toggleRadniNalog('${f.id}', this.checked)">`
+        : (rn ? `<span class="badge ok">DA</span>` : `<span class="badge">NE</span>`);
+
+      const delBtn = state.isAdmin
+        ? `<button class="danger" onclick="window._del('fieldVisits','${f.id}')">X</button>`
+        : ``;
+
+      fieldTable.innerHTML += `
+        <tr>
+          <td>
+            ${escapeHtml(f.ime || "")}
+            ${f.callId ? `<div class="small">vezan poziv</div>` : ``}
+          </td>
+          <td>${escapeHtml(f.datumTeren || "")}</td>
+          <td>${escapeHtml(f.vremeTeren || "")}</td>
+          <td><input value="${escapeAttr(f.ishodTeren || "")}" onchange="window._updateFieldIshod('${f.id}', this.value)"></td>
+          <td style="text-align:center">${rnCell}</td>
+          <td>${delBtn}</td>
+        </tr>
+      `;
+    });
+  }
+
+  /** ===== STATS: ONLY SELECTED MONTH + BY AGENT ===== */
+  function renderStats() {
+    const calls = state.calls;
+    const fields = state.fields;
+
+    const callsCount = calls.length;
+    const fieldsCount = fields.length;
+    const conversion = callsCount ? ((fieldsCount / callsCount) * 100).toFixed(1) : "0.0";
+
+    // per agent: po "ponudaAgent"
+    const byAgent = {};
+    AGENTS.forEach((a) => (byAgent[a] = { calls: 0, fields: 0 }));
+
+    calls.forEach((c) => {
+      const a = c.ponudaAgent || "";
+      if (byAgent[a]) byAgent[a].calls += 1;
+    });
+
+    fields.forEach((f) => {
+      const a = f.ponudaAgent || "";
+      if (byAgent[a]) byAgent[a].fields += 1;
+    });
+
+    const agentBlocks = AGENTS.map((a) => {
+      const ac = byAgent[a].calls;
+      const af = byAgent[a].fields;
+      const conv = ac ? ((af / ac) * 100).toFixed(1) : "0.0";
+      return `
+        <div class="stat">
+          <div style="font-size:14px;opacity:.9">${escapeHtml(a)}</div>
+          <div style="font-size:18px;margin-top:6px">Pozivi: <b>${ac}</b></div>
+          <div style="font-size:18px">Tereni: <b>${af}</b></div>
+          <div style="font-size:14px;opacity:.9;margin-top:6px">Konverzija: <b>${conv}%</b></div>
+        </div>
+      `;
+    }).join("");
+
+    statsEl.innerHTML = `
+      <div class="stat">
+        <div style="font-size:14px;opacity:.9">Tekući prikaz (${state.selectedMonth})</div>
+        <div style="font-size:22px;margin-top:6px">Pozivi: <b>${callsCount}</b></div>
+        <div style="font-size:22px">Tereni: <b>${fieldsCount}</b></div>
+        <div style="font-size:16px;opacity:.9;margin-top:6px">Konverzija: <b>${conversion}%</b></div>
+      </div>
+      ${agentBlocks}
+    `;
+  }
+
+  /** ===== CHART: fields per month (all time) ===== */
+  async function renderChartAllMonths() {
+    // uzmi sve fieldVisits (ako naraste mnogo, radićemo paginaciju / poslednjih 12 meseci)
+    const snap = await getDocs(collection(db, "fieldVisits"));
+    const counts = new Map(); // YYYY-MM -> count
+
+    snap.forEach((d) => {
+      const v = d.data();
+      const k = monthKeyFromYMD(v.datumTeren);
+      if (!k) return;
+      counts.set(k, (counts.get(k) || 0) + 1);
+    });
+
+    // sort keys
+    const keys = Array.from(counts.keys()).sort(); // asc
+    // uzmi poslednjih 12
+    const last = keys.slice(Math.max(0, keys.length - 12));
+    const labels = last.map((k) => k.slice(5)); // MM
+    const values = last.map((k) => counts.get(k) || 0);
+
+    drawBarChart(chartCanvas, labels, values);
+  }
+
+  /** =======================
+   *  WINDOW ACTIONS
+   *  ======================= */
+  window._schedule = (callId) => openScheduleModal(callId);
+
+  window._updateCallIshod = async (id, val) => {
+    await updateDoc(doc(db, "calls", id), { ishod: val });
+  };
+
+  window._toggleStatusPoziva = async (id, checked) => {
+    if (!state.isAdmin) return;
+    await updateDoc(doc(db, "calls", id), { statusPoziva: !!checked });
+  };
+
+  window._updateFieldIshod = async (id, val) => {
+    await updateDoc(doc(db, "fieldVisits", id), { ishodTeren: val });
+  };
+
+  window._toggleRadniNalog = async (id, checked) => {
+    if (!state.isAdmin) return;
+    await updateDoc(doc(db, "fieldVisits", id), { radniNalog: !!checked });
+  };
+
+  window._del = async (col, id) => {
+    if (!state.isAdmin) return;
+    if (!confirm("Obrisati?")) return;
+    await deleteDoc(doc(db, col, id));
+  };
+});
