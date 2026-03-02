@@ -1,115 +1,212 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>CRM Dashboard</title>
 <script type="module" src="app.js"></script>
 
 <style>
 body{margin:0;font-family:Segoe UI;background:#f1f4f9}
-header{background:#111827;color:white;padding:15px;font-size:20px}
+header{background:#111827;color:white;padding:15px;font-size:20px;display:flex;justify-content:space-between;align-items:center;gap:10px}
 .container{padding:20px}
 .card{background:white;padding:15px;margin:10px 0;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.05)}
-.stats{display:flex;gap:15px;flex-wrap:wrap}
-.stat{flex:1;background:#111827;color:white;padding:20px;border-radius:12px}
+.stats{display:flex;gap:15px;flex-wrap:wrap;align-items:stretch}
+.stat{flex:1;min-width:220px;background:#111827;color:white;padding:20px;border-radius:12px}
 button{padding:6px 12px;border:none;border-radius:6px;background:#2563eb;color:white;cursor:pointer}
 button.danger{background:#dc2626}
+button.secondary{background:#334155}
 input,select{padding:6px;border-radius:6px;border:1px solid #ccc}
 table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle}
 tr:hover{background:#f9fafb}
 .green{background:#dcfce7}
-.modal{position:fixed;top:30%;left:40%;background:white;padding:20px;border-radius:12px;display:none;box-shadow:0 10px 30px rgba(0,0,0,0.2)}
-.small{font-size:12px;color:#6b7280}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #e5e7eb;background:#f8fafc}
+.badge.ok{background:#dcfce7;border-color:#86efac}
+.badge.no{background:#fee2e2;border-color:#fca5a5}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row > *{margin:3px 0}
+.modal{position:fixed;top:30%;left:50%;transform:translateX(-50%);background:white;padding:20px;border-radius:12px;display:none;box-shadow:0 10px 30px rgba(0,0,0,0.2);min-width:340px}
+.small{font-size:12px;opacity:.85}
+hr{border:none;border-top:1px solid #eee;margin:10px 0}
 </style>
 </head>
-<body>
 
-<header>CRM Evidencija</header>
+<body>
+<header>
+  <div>CRM Evidencija</div>
+  <div class="row">
+    <span id="whoami" class="small"></span>
+    <button id="logoutBtn" class="secondary" style="display:none">Logout</button>
+  </div>
+</header>
 
 <div class="container">
 
-<div id="login">
-  <h3>Login</h3>
-  <form id="loginForm">
-    <input id="email" placeholder="Email" autocomplete="username">
-    <input id="password" type="password" placeholder="Password" autocomplete="current-password">
-    <button id="loginBtn" type="submit">Login</button>
-  </form>
-  <div id="loginError" style="margin-top:10px;color:#dc2626;"></div>
-</div>
-
-<div id="app" style="display:none">
-
-  <div class="stats" id="stats"></div>
-
-  <div class="card">
-    <h3>Pretraga</h3>
-    <input id="searchAll" placeholder="Traži: telefon, ime, šifra, agent, ishod...">
-    <div class="small" id="monthLabel"></div>
+  <div id="login" class="card">
+    <h3>Login</h3>
+    <div class="row">
+      <input id="email" placeholder="Email" />
+      <input id="password" type="password" placeholder="Password" />
+      <button id="loginBtn">Login</button>
+    </div>
+    <div class="small">Admin: samo admin može brisati / čekirati status poziva i radni nalog.</div>
   </div>
 
-  <div class="card">
-    <h3>Dodaj Poziv</h3>
-    <input id="ime" placeholder="Ime">
-    <input id="sifra" placeholder="Šifra">
-    <input id="adresa" placeholder="Adresa">
-    <input id="telefon" placeholder="Telefon">
-    <input type="date" id="datumPoziva">
+  <div id="app" style="display:none">
 
-    <select id="agent">
-      <option>Marija</option>
-      <option>Slavko</option>
-      <option>Jovan</option>
-    </select>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <label class="small">Mesec prikaza:</label>
+          <input type="month" id="monthPick" />
+          <button id="monthToday" class="secondary">Danas</button>
+        </div>
 
-    <select id="ponuda">
-      <option value="">Generisao ponudu</option>
-      <option>Marija</option>
-      <option>Slavko</option>
-      <option>Jovan</option>
-    </select>
+        <div class="row">
+          <label class="small">Sort:</label>
+          <select id="sortBy">
+            <option value="datumPoziva_desc">Datum (novo→staro)</option>
+            <option value="datumPoziva_asc">Datum (staro→novo)</option>
+            <option value="ime_asc">Ime (A→Z)</option>
+            <option value="ime_desc">Ime (Z→A)</option>
+            <option value="telefon_asc">Telefon (A→Z)</option>
+            <option value="telefon_desc">Telefon (Z→A)</option>
+            <option value="statusPoziva_desc">Status (čekirano prvo)</option>
+            <option value="statusPoziva_asc">Status (nečekirano prvo)</option>
+          </select>
+        </div>
+      </div>
+      <div class="small">Filter po mesecu utiče na tabelu poziva + statistiku + grafikon.</div>
+    </div>
 
-    <input id="ishod" placeholder="Ishod poziva">
-    <button id="addCall" type="button">Dodaj</button>
+    <div class="stats" id="stats"></div>
+
+    <div class="card">
+      <h3>Realizovani tereni (grafikon po mesecima)</h3>
+      <canvas id="chart" width="900" height="220" style="width:100%;max-width:100%"></canvas>
+      <div class="small">Broji terene iz kolekcije <b>fieldVisits</b>.</div>
+    </div>
+
+    <div class="card">
+      <h3>Dodaj Poziv</h3>
+      <div class="row">
+        <input id="ime" placeholder="Ime" />
+        <input id="sifra" placeholder="Šifra" />
+        <input id="adresa" placeholder="Adresa" />
+        <input id="telefon" placeholder="Telefon" />
+        <input type="date" id="datumPoziva" />
+
+        <!-- SAMO ovo: Generisao ponudu dropdown sa agentima -->
+        <select id="ponudaAgent">
+          <option value="">Generisao ponudu (izaberi)</option>
+          <option>Marija</option>
+          <option>Slavko</option>
+          <option>Jovan</option>
+        </select>
+
+        <input id="ishod" placeholder="Ishod poziva" />
+        <button id="addCall">Dodaj</button>
+      </div>
+      <div class="small">Datum poziva se automatski postavlja na današnji.</div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h3 style="margin:0">Pozivi</h3>
+        <input id="search" placeholder="Pretraga (ime, telefon, sifra...)" />
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Ime</th>
+            <th>Šifra</th>
+            <th>Telefon</th>
+            <th>Generisao ponudu</th>
+            <th>Ishod</th>
+            <th>Status poziva</th>
+            <th>Status</th>
+            <th>Akcija</th>
+          </tr>
+        </thead>
+        <tbody id="callsTable"></tbody>
+      </table>
+
+      <div class="small">
+        <span class="badge ok">Zakazan teren</span> red je zelen.
+        <span class="badge">Status poziva</span> je checkbox (admin).
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h3 style="margin:0">Tereni</h3>
+        <button id="manualField" class="secondary">Dodaj Ručno Teren</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Ime</th>
+            <th>Datum</th>
+            <th>Vreme</th>
+            <th>Ishod</th>
+            <th>Radni nalog</th>
+            <th>Akcija</th>
+          </tr>
+        </thead>
+        <tbody id="fieldTable"></tbody>
+      </table>
+    </div>
+
   </div>
 
-  <div class="card">
-    <h3>Pozivi (tekući mesec)</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Ime</th><th>Šifra</th><th>Telefon</th>
-          <th>Agent</th><th>Ishod</th><th>Status</th><th>Akcija</th>
-        </tr>
-      </thead>
-      <tbody id="callsTable"></tbody>
-    </table>
+  <!-- Modal: povezivanje poziva sa terenom -->
+  <div class="modal" id="modal">
+    <h4>Zakazi teren (poziv → teren)</h4>
+    <div class="small">Datum i vreme se podrazumevano postavljaju na danas + 10:00.</div>
+    <hr/>
+    <label class="small">Datum</label><br/>
+    <input type="date" id="datumTeren" />
+    <br><br>
+    <label class="small">Vreme</label><br/>
+    <input type="time" id="vremeTeren" />
+    <hr/>
+    <button id="confirmField">Potvrdi</button>
+    <button id="cancelField" class="secondary">Otkaži</button>
   </div>
 
-  <div class="card">
-    <h3>Tereni (tekući mesec)</h3>
-    <button id="manualField" type="button">Dodaj Ručno Teren</button>
-    <table>
-      <thead>
-        <tr>
-          <th>Ime</th><th>Šifra</th><th>Telefon</th><th>Agent</th>
-          <th>Datum</th><th>Ishod</th><th>Akcija</th>
-        </tr>
-      </thead>
-      <tbody id="fieldTable"></tbody>
-    </table>
+  <!-- Modal: ručno dodavanje terena -->
+  <div class="modal" id="manualModal">
+    <h4>Ručno dodaj teren</h4>
+    <div class="small">Polja su ista kao u tabeli terena.</div>
+    <hr/>
+
+    <label class="small">Ime</label><br/>
+    <input id="mIme" placeholder="Ime" />
+    <br><br>
+
+    <label class="small">Datum</label><br/>
+    <input type="date" id="mDatumTeren" />
+    <br><br>
+
+    <label class="small">Vreme</label><br/>
+    <input type="time" id="mVremeTeren" />
+    <br><br>
+
+    <label class="small">Ishod</label><br/>
+    <input id="mIshodTeren" placeholder="Ishod terena" />
+    <br><br>
+
+    <label class="small">
+      <input type="checkbox" id="mRadniNalog" />
+      Radni nalog
+    </label>
+
+    <hr/>
+    <button id="saveManualField">Sačuvaj</button>
+    <button id="cancelManualField" class="secondary">Otkaži</button>
   </div>
-
-</div>
-
-<div class="modal" id="modal">
-  <h4>Datum terena</h4>
-  <input type="date" id="datumTeren">
-  <br><br>
-  <button id="confirmField" type="button">Potvrdi</button>
-  <button id="cancelField" type="button" class="danger" style="margin-left:8px;">Otkaži</button>
-</div>
 
 </div>
 </body>
