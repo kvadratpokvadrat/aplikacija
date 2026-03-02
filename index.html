@@ -20,6 +20,7 @@ th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
 tr:hover{background:#f9fafb}
 .green{background:#dcfce7}
 .modal{position:fixed;top:30%;left:40%;background:white;padding:20px;border-radius:12px;display:none;box-shadow:0 10px 30px rgba(0,0,0,0.2)}
+.small{font-size:12px;color:#6b7280}
 </style>
 </head>
 <body>
@@ -30,20 +31,23 @@ tr:hover{background:#f9fafb}
 
 <div id="login">
   <h3>Login</h3>
-
-  <!-- form uklanja browser warning za password -->
   <form id="loginForm">
     <input id="email" placeholder="Email" autocomplete="username">
     <input id="password" type="password" placeholder="Password" autocomplete="current-password">
     <button id="loginBtn" type="submit">Login</button>
   </form>
-
   <div id="loginError" style="margin-top:10px;color:#dc2626;"></div>
 </div>
 
 <div id="app" style="display:none">
 
   <div class="stats" id="stats"></div>
+
+  <div class="card">
+    <h3>Pretraga</h3>
+    <input id="searchAll" placeholder="Traži: telefon, ime, šifra, agent, ishod...">
+    <div class="small" id="monthLabel"></div>
+  </div>
 
   <div class="card">
     <h3>Dodaj Poziv</h3>
@@ -71,8 +75,7 @@ tr:hover{background:#f9fafb}
   </div>
 
   <div class="card">
-    <h3>Pozivi</h3>
-    <input id="search" placeholder="Pretraga...">
+    <h3>Pozivi (tekući mesec)</h3>
     <table>
       <thead>
         <tr>
@@ -85,12 +88,13 @@ tr:hover{background:#f9fafb}
   </div>
 
   <div class="card">
-    <h3>Tereni</h3>
+    <h3>Tereni (tekući mesec)</h3>
     <button id="manualField" type="button">Dodaj Ručno Teren</button>
     <table>
       <thead>
         <tr>
-          <th>Ime</th><th>Datum</th><th>Ishod</th><th>Akcija</th>
+          <th>Ime</th><th>Šifra</th><th>Telefon</th><th>Agent</th>
+          <th>Datum</th><th>Ishod</th><th>Akcija</th>
         </tr>
       </thead>
       <tbody id="fieldTable"></tbody>
