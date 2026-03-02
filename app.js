@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } 
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged }
 from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 import {
   getFirestore,
@@ -28,22 +28,17 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/** =======================
- *  DOM refs (OVO JE FALILO)
- *  ======================= */
+/** DOM refs */
 const login = document.getElementById("login");
 const appDiv = document.getElementById("app");
 
 const loginForm = document.getElementById("loginForm");
 const loginBtn = document.getElementById("loginBtn");
 const loginError = document.getElementById("loginError");
-
 const email = document.getElementById("email");
 const password = document.getElementById("password");
 
 const addCall = document.getElementById("addCall");
-const search = document.getElementById("search");
-
 const ime = document.getElementById("ime");
 const sifra = document.getElementById("sifra");
 const adresa = document.getElementById("adresa");
@@ -62,11 +57,43 @@ const datumTeren = document.getElementById("datumTeren");
 const confirmField = document.getElementById("confirmField");
 const cancelField = document.getElementById("cancelField");
 
+const searchAll = document.getElementById("searchAll");
+const monthLabel = document.getElementById("monthLabel");
+
 let selectedCall = null;
 
-/** =======================
- *  LOGIN
- *  ======================= */
+/** ===== helpers: date range for current month (YYYY-MM-DD) ===== */
+function toYMD(d) {
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+function getCurrentMonthRange() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const start = new Date(y, m, 1);
+  const end = new Date(y, m + 1, 0);
+  return { start: toYMD(start), end: toYMD(end), y, m };
+}
+function monthName(m) {
+  return ["Januar","Februar","Mart","April","Maj","Jun","Jul","Avgust","Septembar","Oktobar","Novembar","Decembar"][m];
+}
+
+/** ===== helpers: basic escaping ===== */
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+function escapeAttr(str) {
+  return escapeHtml(str).replaceAll("\n", " ");
+}
+
+/** ===== LOGIN ===== */
 loginForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
   loginError.textContent = "";
@@ -76,8 +103,6 @@ loginForm?.addEventListener("submit", async (e) => {
     loginError.textContent = err?.message || "Greška pri logovanju.";
   }
 });
-
-// ako nema forme (fallback)
 loginBtn?.addEventListener("click", async () => {
   loginError.textContent = "";
   try {
@@ -93,39 +118,34 @@ onAuthStateChanged(auth, (user) => {
     appDiv.style.display = "block";
     loadAll();
   } else {
-    // ako se izloguje
     appDiv.style.display = "none";
     login.style.display = "block";
   }
 });
 
-/** =======================
- *  LOAD
- *  ======================= */
-async function loadAll() {
-  loadCalls();
-  loadFields();
-  renderStats();
+/** ===== Month label ===== */
+function renderMonthLabel() {
+  const { y, m, start, end } = getCurrentMonthRange();
+  monthLabel.textContent = `Prikaz: ${monthName(m)} ${y} (${start} → ${end})`;
 }
 
-/** =======================
- *  ADD CALL
- *  ======================= */
+/** ===== LOAD ===== */
+function loadAll() {
+  renderMonthLabel();
+  loadCallsCurrentMonth();
+  loadFieldsCurrentMonth();
+  renderStatsCurrentMonth().catch(() => {});
+}
+
+/** ===== ADD CALL ===== */
 async function addNewCall() {
   const tel = (telefon.value || "").trim();
-
-  if (!tel) {
-    alert("Unesi telefon.");
-    return;
-  }
+  if (!tel) { alert("Unesi telefon."); return; }
 
   // duplikat po telefonu
-  const q = query(collection(db, "calls"), where("telefon", "==", tel));
-  const snap = await getDocs(q);
-  if (!snap.empty) {
-    alert("Telefon postoji!");
-    return;
-  }
+  const qDup = query(collection(db, "calls"), where("telefon", "==", tel));
+  const snapDup = await getDocs(qDup);
+  if (!snapDup.empty) { alert("Telefon postoji!"); return; }
 
   await addDoc(collection(db, "calls"), {
     ime: (ime.value || "").trim(),
@@ -138,24 +158,38 @@ async function addNewCall() {
     ishod: (ishod.value || "").trim(),
     teren: false
   });
-
-  // opcionalno: očisti formu
-  // ime.value = sifra.value = adresa.value = telefon.value = ishod.value = "";
 }
-
 addCall.addEventListener("click", () => {
   addNewCall().catch((e) => alert(e?.message || "Greška pri upisu."));
 });
 
-/** =======================
- *  LIST CALLS
- *  ======================= */
-function loadCalls() {
-  onSnapshot(collection(db, "calls"), (snap) => {
+/** ===== QUERIES: current month only ===== */
+function currentMonthCallsQuery() {
+  const { start, end } = getCurrentMonthRange();
+  return query(
+    collection(db, "calls"),
+    where("datumPoziva", ">=", start),
+    where("datumPoziva", "<=", end)
+  );
+}
+function currentMonthFieldsQuery() {
+  const { start, end } = getCurrentMonthRange();
+  return query(
+    collection(db, "fieldVisits"),
+    where("datumTeren", ">=", start),
+    where("datumTeren", "<=", end)
+  );
+}
+
+/** ===== LIST CALLS: current month ===== */
+function loadCallsCurrentMonth() {
+  const qCalls = currentMonthCallsQuery();
+
+  onSnapshot(qCalls, (snap) => {
     callsTable.innerHTML = "";
+
     snap.forEach((docu) => {
       const d = docu.data();
-
       callsTable.innerHTML += `
         <tr class="${d.teren ? "green" : ""}">
           <td>${escapeHtml(d.ime || "")}</td>
@@ -175,8 +209,8 @@ function loadCalls() {
       `;
     });
 
-    // refresh stats kad se promene podaci
-    renderStats().catch(() => {});
+    applySearchFilter();
+    renderStatsCurrentMonth().catch(() => {});
   });
 }
 
@@ -184,9 +218,7 @@ window.updateCall = async (id, val) => {
   await updateDoc(doc(db, "calls", id), { ishod: val });
 };
 
-/** =======================
- *  TEREN MODAL
- *  ======================= */
+/** ===== TEREN MODAL / VEZA POZIV → TEREN ===== */
 window.schedule = (id) => {
   selectedCall = id;
   modal.style.display = "block";
@@ -212,11 +244,15 @@ confirmField.addEventListener("click", async () => {
 
   const data = snap.data();
 
+  // Upis terena + svi ključni podaci + veza callId
   await addDoc(collection(db, "fieldVisits"), {
+    callId: selectedCall,           // VEZA NA POZIV
     ime: data.ime || "",
+    sifra: data.sifra || "",
+    telefon: data.telefon || "",
+    agent: data.agent || "",
     datumTeren: datumTeren.value || "",
-    ishodTeren: "",
-    agent: data.agent || ""
+    ishodTeren: ""
   });
 
   await updateDoc(callRef, { teren: true });
@@ -224,20 +260,24 @@ confirmField.addEventListener("click", async () => {
   modal.style.display = "none";
   selectedCall = null;
 
-  renderStats().catch(() => {});
+  renderStatsCurrentMonth().catch(() => {});
 });
 
-/** =======================
- *  LIST FIELDS
- *  ======================= */
-function loadFields() {
-  onSnapshot(collection(db, "fieldVisits"), (snap) => {
+/** ===== LIST FIELDS: current month ===== */
+function loadFieldsCurrentMonth() {
+  const qFields = currentMonthFieldsQuery();
+
+  onSnapshot(qFields, (snap) => {
     fieldTable.innerHTML = "";
+
     snap.forEach((docu) => {
       const d = docu.data();
       fieldTable.innerHTML += `
         <tr>
           <td>${escapeHtml(d.ime || "")}</td>
+          <td>${escapeHtml(d.sifra || "")}</td>
+          <td>${escapeHtml(d.telefon || "")}</td>
+          <td>${escapeHtml(d.agent || "")}</td>
           <td>${escapeHtml(d.datumTeren || "")}</td>
           <td>
             <input value="${escapeAttr(d.ishodTeren || "")}"
@@ -250,7 +290,8 @@ function loadFields() {
       `;
     });
 
-    renderStats().catch(() => {});
+    applySearchFilter();
+    renderStatsCurrentMonth().catch(() => {});
   });
 }
 
@@ -260,47 +301,37 @@ window.updateField = async (id, val) => {
 
 window.delDoc = async (col, id) => {
   await deleteDoc(doc(db, col, id));
-  renderStats().catch(() => {});
+  renderStatsCurrentMonth().catch(() => {});
 };
 
-/** =======================
- *  SEARCH FILTER
- *  ======================= */
-search.addEventListener("input", () => {
-  const val = (search.value || "").toLowerCase();
-  document.querySelectorAll("#callsTable tr").forEach((r) => {
-    r.style.display = r.innerText.toLowerCase().includes(val) ? "" : "none";
-  });
-});
+/** ===== SEARCH: filter BOTH tables ===== */
+function applySearchFilter() {
+  const val = (searchAll?.value || "").toLowerCase().trim();
 
-/** =======================
- *  STATS (preimenovano)
- *  ======================= */
-async function renderStats() {
-  const calls = await getDocs(collection(db, "calls"));
-  const fields = await getDocs(collection(db, "fieldVisits"));
+  const filterRows = (selector) => {
+    document.querySelectorAll(selector).forEach((r) => {
+      r.style.display = r.innerText.toLowerCase().includes(val) ? "" : "none";
+    });
+  };
 
-  const conversion = calls.size ? ((fields.size / calls.size) * 100).toFixed(1) : "0.0";
+  filterRows("#callsTable tr");
+  filterRows("#fieldTable tr");
+}
+searchAll?.addEventListener("input", applySearchFilter);
+
+/** ===== STATS: current month only ===== */
+async function renderStatsCurrentMonth() {
+  const callsSnap = await getDocs(currentMonthCallsQuery());
+  const fieldsSnap = await getDocs(currentMonthFieldsQuery());
+
+  const callsCount = callsSnap.size;
+  const fieldsCount = fieldsSnap.size;
+
+  const conversion = callsCount ? ((fieldsCount / callsCount) * 100).toFixed(1) : "0.0";
 
   statsEl.innerHTML = `
-    <div class="stat">Pozivi: ${calls.size}</div>
-    <div class="stat">Tereni: ${fields.size}</div>
-    <div class="stat">Konverzija: ${conversion}%</div>
+    <div class="stat">Pozivi (mesec): ${callsCount}</div>
+    <div class="stat">Tereni (mesec): ${fieldsCount}</div>
+    <div class="stat">Konverzija (mesec): ${conversion}%</div>
   `;
-}
-
-/** =======================
- *  helpers: basic escaping
- *  ======================= */
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-function escapeAttr(str) {
-  // za value=""
-  return escapeHtml(str).replaceAll("\n", " ");
 }
