@@ -29,7 +29,7 @@ const firebaseConfig = {
 
 // UBACI ADMIN MEJLOVE
 const ADMIN_EMAILS = [
-  // "admin@tvoja-firma.rs",
+  // "stefanbarac@gmail.com",
 ];
 
 const app = initializeApp(firebaseConfig);
@@ -524,3 +524,4 @@ function drawChartByMonths() {
   ctx.font = "12px Segoe UI";
   ctx.fillText("Tereni po mesecima (poslednjih 12)", padL, 14);
 }
+
