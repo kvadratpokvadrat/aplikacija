@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>CRM Dashboard</title>
+<script type="module" src="app.js"></script>
+
+<style>
+body{margin:0;font-family:Segoe UI;background:#f1f4f9}
+header{background:#111827;color:white;padding:15px;font-size:20px}
+.container{padding:20px}
+.card{background:white;padding:15px;margin:10px 0;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.05)}
+.stats{display:flex;gap:15px;flex-wrap:wrap}
+.stat{flex:1;background:#111827;color:white;padding:20px;border-radius:12px}
+button{padding:6px 12px;border:none;border-radius:6px;background:#2563eb;color:white;cursor:pointer}
+button.danger{background:#dc2626}
+input,select{padding:6px;border-radius:6px;border:1px solid #ccc}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+tr:hover{background:#f9fafb}
+.green{background:#dcfce7}
+.modal{position:fixed;top:30%;left:40%;background:white;padding:20px;border-radius:12px;display:none;box-shadow:0 10px 30px rgba(0,0,0,0.2)}
+</style>
+</head>
+<body>
+
+<header>CRM Evidencija</header>
+
+<div class="container">
+
+<div id="login">
+<h3>Login</h3>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button id="loginBtn">Login</button>
+</div>
+
+<div id="app" style="display:none">
+
+<div class="stats" id="stats"></div>
+
+<div class="card">
+<h3>Dodaj Poziv</h3>
+<input id="ime" placeholder="Ime">
+<input id="sifra" placeholder="Šifra">
+<input id="adresa" placeholder="Adresa">
+<input id="telefon" placeholder="Telefon">
+<input type="date" id="datumPoziva">
+<select id="agent">
+<option>Marija</option>
+<option>Slavko</option>
+<option>Jovan</option>
+</select>
+<select id="ponuda">
+<option value="">Generisao ponudu</option>
+<option>Marija</option>
+<option>Slavko</option>
+<option>Jovan</option>
+</select>
+<input id="ishod" placeholder="Ishod poziva">
+<button id="addCall">Dodaj</button>
+</div>
+
+<div class="card">
+<h3>Pozivi</h3>
+<input id="search" placeholder="Pretraga...">
+<table>
+<thead>
+<tr>
+<th>Ime</th><th>Šifra</th><th>Telefon</th>
+<th>Agent</th><th>Ishod</th><th>Status</th><th>Akcija</th>
+</tr>
+</thead>
+<tbody id="callsTable"></tbody>
+</table>
+</div>
+
+<div class="card">
+<h3>Tereni</h3>
+<button id="manualField">Dodaj Ručno Teren</button>
+<table>
+<thead>
+<tr>
+<th>Ime</th><th>Datum</th><th>Ishod</th><th>Akcija</th>
+</tr>
+</thead>
+<tbody id="fieldTable"></tbody>
+</table>
+</div>
+
+</div>
+
+<div class="modal" id="modal">
+<h4>Datum terena</h4>
+<input type="date" id="datumTeren">
+<br><br>
+<button id="confirmField">Potvrdi</button>
+</div>
+
+</div>
+</body>
+</html>
