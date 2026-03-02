@@ -29,72 +29,82 @@ tr:hover{background:#f9fafb}
 <div class="container">
 
 <div id="login">
-<h3>Login</h3>
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-<button id="loginBtn">Login</button>
+  <h3>Login</h3>
+
+  <!-- form uklanja browser warning za password -->
+  <form id="loginForm">
+    <input id="email" placeholder="Email" autocomplete="username">
+    <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+    <button id="loginBtn" type="submit">Login</button>
+  </form>
+
+  <div id="loginError" style="margin-top:10px;color:#dc2626;"></div>
 </div>
 
 <div id="app" style="display:none">
 
-<div class="stats" id="stats"></div>
+  <div class="stats" id="stats"></div>
 
-<div class="card">
-<h3>Dodaj Poziv</h3>
-<input id="ime" placeholder="Ime">
-<input id="sifra" placeholder="Šifra">
-<input id="adresa" placeholder="Adresa">
-<input id="telefon" placeholder="Telefon">
-<input type="date" id="datumPoziva">
-<select id="agent">
-<option>Marija</option>
-<option>Slavko</option>
-<option>Jovan</option>
-</select>
-<select id="ponuda">
-<option value="">Generisao ponudu</option>
-<option>Marija</option>
-<option>Slavko</option>
-<option>Jovan</option>
-</select>
-<input id="ishod" placeholder="Ishod poziva">
-<button id="addCall">Dodaj</button>
-</div>
+  <div class="card">
+    <h3>Dodaj Poziv</h3>
+    <input id="ime" placeholder="Ime">
+    <input id="sifra" placeholder="Šifra">
+    <input id="adresa" placeholder="Adresa">
+    <input id="telefon" placeholder="Telefon">
+    <input type="date" id="datumPoziva">
 
-<div class="card">
-<h3>Pozivi</h3>
-<input id="search" placeholder="Pretraga...">
-<table>
-<thead>
-<tr>
-<th>Ime</th><th>Šifra</th><th>Telefon</th>
-<th>Agent</th><th>Ishod</th><th>Status</th><th>Akcija</th>
-</tr>
-</thead>
-<tbody id="callsTable"></tbody>
-</table>
-</div>
+    <select id="agent">
+      <option>Marija</option>
+      <option>Slavko</option>
+      <option>Jovan</option>
+    </select>
 
-<div class="card">
-<h3>Tereni</h3>
-<button id="manualField">Dodaj Ručno Teren</button>
-<table>
-<thead>
-<tr>
-<th>Ime</th><th>Datum</th><th>Ishod</th><th>Akcija</th>
-</tr>
-</thead>
-<tbody id="fieldTable"></tbody>
-</table>
-</div>
+    <select id="ponuda">
+      <option value="">Generisao ponudu</option>
+      <option>Marija</option>
+      <option>Slavko</option>
+      <option>Jovan</option>
+    </select>
+
+    <input id="ishod" placeholder="Ishod poziva">
+    <button id="addCall" type="button">Dodaj</button>
+  </div>
+
+  <div class="card">
+    <h3>Pozivi</h3>
+    <input id="search" placeholder="Pretraga...">
+    <table>
+      <thead>
+        <tr>
+          <th>Ime</th><th>Šifra</th><th>Telefon</th>
+          <th>Agent</th><th>Ishod</th><th>Status</th><th>Akcija</th>
+        </tr>
+      </thead>
+      <tbody id="callsTable"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Tereni</h3>
+    <button id="manualField" type="button">Dodaj Ručno Teren</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Ime</th><th>Datum</th><th>Ishod</th><th>Akcija</th>
+        </tr>
+      </thead>
+      <tbody id="fieldTable"></tbody>
+    </table>
+  </div>
 
 </div>
 
 <div class="modal" id="modal">
-<h4>Datum terena</h4>
-<input type="date" id="datumTeren">
-<br><br>
-<button id="confirmField">Potvrdi</button>
+  <h4>Datum terena</h4>
+  <input type="date" id="datumTeren">
+  <br><br>
+  <button id="confirmField" type="button">Potvrdi</button>
+  <button id="cancelField" type="button" class="danger" style="margin-left:8px;">Otkaži</button>
 </div>
 
 </div>
