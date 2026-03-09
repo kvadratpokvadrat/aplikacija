@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <title>CRM Dashboard</title>
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=4"></script>
 
 <style>
 body{margin:0;font-family:Segoe UI;background:#f1f4f9}
@@ -25,7 +25,7 @@ tr:hover{background:#f9fafb}
 .badge.no{background:#fee2e2;border-color:#fca5a5}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .row > *{margin:3px 0}
-.modal{position:fixed;top:30%;left:50%;transform:translateX(-50%);background:white;padding:20px;border-radius:12px;display:none;box-shadow:0 10px 30px rgba(0,0,0,0.2);min-width:340px}
+.modal{position:fixed;top:30%;left:50%;transform:translateX(-50%);background:white;padding:20px;border-radius:12px;display:none;box-shadow:0 10px 30px rgba(0,0,0,0.2);min-width:340px;z-index:1000}
 .small{font-size:12px;opacity:.85}
 hr{border:none;border-top:1px solid #eee;margin:10px 0}
 </style>
@@ -45,8 +45,8 @@ hr{border:none;border-top:1px solid #eee;margin:10px 0}
   <div id="login" class="card">
     <h3>Login</h3>
     <div class="row">
-      <input id="email" placeholder="Email" />
-      <input id="password" type="password" placeholder="Password" />
+      <input id="email" placeholder="Email" autocomplete="username" />
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
       <button id="loginBtn">Login</button>
     </div>
     <div class="small">Admin: samo admin može brisati / čekirati status poziva i radni nalog.</div>
@@ -76,27 +76,34 @@ hr{border:none;border-top:1px solid #eee;margin:10px 0}
           </select>
         </div>
       </div>
-      <div class="small">Filter po mesecu utiče na tabelu poziva + statistiku + grafikon.</div>
+      <div class="small">Filter po mesecu utiče na tabelu poziva, terena i statistiku.</div>
     </div>
 
     <div class="stats" id="stats"></div>
 
     <div class="card">
-      <h3>Realizovani tereni (grafikon po mesecima)</h3>
-      <canvas id="chart" width="900" height="220" style="width:100%;max-width:100%"></canvas>
-      <div class="small">Broji terene iz kolekcije <b>fieldVisits</b>.</div>
+      <div class="row" style="justify-content:space-between">
+        <h3 style="margin:0">Grafikon realizovanih terena</h3>
+        <button id="toggleChart" class="secondary">Prikaži grafikon</button>
+      </div>
+
+      <div id="chartWrap" style="display:none;margin-top:12px">
+        <canvas id="chart" width="900" height="260" style="width:100%;max-width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px"></canvas>
+        <div class="small" style="margin-top:8px">
+          Broji terene iz kolekcije <b>fieldVisits</b>.
+        </div>
+      </div>
     </div>
 
     <div class="card">
       <h3>Dodaj Poziv</h3>
       <div class="row">
-        <input id="ime" placeholder="Ime" />
+        <input id="ime" placeholder="Ime i prezime" />
         <input id="sifra" placeholder="Šifra" />
         <input id="adresa" placeholder="Adresa" />
         <input id="telefon" placeholder="Telefon" />
         <input type="date" id="datumPoziva" />
 
-        <!-- SAMO ovo: Generisao ponudu dropdown sa agentima -->
         <select id="ponudaAgent">
           <option value="">Generisao ponudu (izaberi)</option>
           <option>Marija</option>
@@ -107,7 +114,7 @@ hr{border:none;border-top:1px solid #eee;margin:10px 0}
         <input id="ishod" placeholder="Ishod poziva" />
         <button id="addCall">Dodaj</button>
       </div>
-      <div class="small">Datum poziva se automatski postavlja na današnji.</div>
+      <div class="small">Sva polja kod poziva moraju biti popunjena.</div>
     </div>
 
     <div class="card">
@@ -148,6 +155,8 @@ hr{border:none;border-top:1px solid #eee;margin:10px 0}
         <thead>
           <tr>
             <th>Ime</th>
+            <th>Adresa</th>
+            <th>Telefon</th>
             <th>Datum</th>
             <th>Vreme</th>
             <th>Ishod</th>
@@ -161,7 +170,6 @@ hr{border:none;border-top:1px solid #eee;margin:10px 0}
 
   </div>
 
-  <!-- Modal: povezivanje poziva sa terenom -->
   <div class="modal" id="modal">
     <h4>Zakazi teren (poziv → teren)</h4>
     <div class="small">Datum i vreme se podrazumevano postavljaju na danas + 10:00.</div>
@@ -176,14 +184,21 @@ hr{border:none;border-top:1px solid #eee;margin:10px 0}
     <button id="cancelField" class="secondary">Otkaži</button>
   </div>
 
-  <!-- Modal: ručno dodavanje terena -->
   <div class="modal" id="manualModal">
     <h4>Ručno dodaj teren</h4>
-    <div class="small">Polja su ista kao u tabeli terena.</div>
+    <div class="small">Kod terena su obavezni ime, adresa, telefon, datum i vreme. Ishod može ostati prazan.</div>
     <hr/>
 
     <label class="small">Ime</label><br/>
-    <input id="mIme" placeholder="Ime" />
+    <input id="mIme" placeholder="Ime i prezime" />
+    <br><br>
+
+    <label class="small">Adresa</label><br/>
+    <input id="mAdresa" placeholder="Adresa" />
+    <br><br>
+
+    <label class="small">Telefon</label><br/>
+    <input id="mTelefon" placeholder="Telefon" />
     <br><br>
 
     <label class="small">Datum</label><br/>
