@@ -19,9 +19,6 @@ import {
   where,
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-/** =======================
- *  FIREBASE CONFIG
- *  ======================= */
 const firebaseConfig = {
   apiKey: "AIzaSyBt7ZmogAfvQrp2TZ-TaT8haZO-Q5BUrkY",
   authDomain: "evidencija-1b5b1.firebaseapp.com",
@@ -35,20 +32,15 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/** =======================
- *  ADMIN LIST (EDIT THIS)
- *  ======================= */
+// OVDE upiši admin email(ove)
 const ADMIN_EMAILS = [
-  "stefanbarac@gmail.com", // <- promeni na tvoj admin email
+  "stefanbarac@gmail.com",
 ];
 
-/** =======================
- *  HELPERS
- *  ======================= */
 const AGENTS = ["Marija", "Slavko", "Jovan"];
 
 function isAdminEmail(email) {
-  return ADMIN_EMAILS.map((e) => e.toLowerCase().trim()).includes(String(email || "").toLowerCase().trim());
+  return ADMIN_EMAILS.map(e => e.toLowerCase().trim()).includes(String(email || "").toLowerCase().trim());
 }
 
 function toYMD(d) {
@@ -56,24 +48,21 @@ function toYMD(d) {
   const dd = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
-function toHM(d) {
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
-}
+
 function monthKeyFromYMD(ymd) {
-  // "2026-03-02" -> "2026-03"
   if (!ymd || typeof ymd !== "string") return "";
   return ymd.slice(0, 7);
 }
+
 function currentMonthKey() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
-function monthRangeFromMonthKey(key /* YYYY-MM */) {
-  const [y, m] = key.split("-").map((x) => parseInt(x, 10));
+
+function monthRangeFromMonthKey(key) {
+  const [y, m] = key.split("-").map(x => parseInt(x, 10));
   const start = new Date(y, m - 1, 1);
-  const end = new Date(y, m, 0); // last day
+  const end = new Date(y, m, 0);
   return { start: toYMD(start), end: toYMD(end) };
 }
 
@@ -85,79 +74,92 @@ function escapeHtml(str) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
 function escapeAttr(str) {
   return escapeHtml(str).replaceAll("\n", " ");
 }
 
 function drawBarChart(canvas, labels, values) {
   if (!canvas) return;
+
   const ctx = canvas.getContext("2d");
   const W = canvas.width;
   const H = canvas.height;
 
-  // clear
   ctx.clearRect(0, 0, W, H);
 
-  // padding
-  const padL = 40, padR = 20, padT = 20, padB = 30;
+  const padL = 55;
+  const padR = 20;
+  const padT = 25;
+  const padB = 45;
+
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
 
-  // axes
+  const maxVal = Math.max(1, ...values);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+
+  const steps = 5;
+  ctx.strokeStyle = "#e5e7eb";
+  ctx.lineWidth = 1;
+  ctx.font = "12px Segoe UI";
+  ctx.fillStyle = "#64748b";
+  ctx.textAlign = "right";
+
+  for (let i = 0; i <= steps; i++) {
+    const y = padT + (chartH / steps) * i;
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(padL + chartW, y);
+    ctx.stroke();
+
+    const val = Math.round(maxVal - (maxVal / steps) * i);
+    ctx.fillText(String(val), padL - 8, y + 4);
+  }
+
+  ctx.strokeStyle = "#94a3b8";
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.moveTo(padL, padT);
   ctx.lineTo(padL, padT + chartH);
   ctx.lineTo(padL + chartW, padT + chartH);
-  ctx.strokeStyle = "#111827";
-  ctx.lineWidth = 1;
   ctx.stroke();
 
-  const maxVal = Math.max(1, ...values);
-  const barCount = Math.max(1, values.length);
-  const gap = 8;
-  const barW = Math.max(6, Math.floor((chartW - gap * (barCount - 1)) / barCount));
+  const count = Math.max(values.length, 1);
+  const gap = 14;
+  const barW = Math.max(18, Math.floor((chartW - gap * (count - 1)) / count));
 
-  // bars
   values.forEach((v, i) => {
     const x = padL + i * (barW + gap);
-    const h = Math.round((v / maxVal) * chartH);
+    const h = Math.round((v / maxVal) * (chartH - 8));
     const y = padT + chartH - h;
 
     ctx.fillStyle = "#2563eb";
     ctx.fillRect(x, y, barW, h);
 
-    // value
-    ctx.fillStyle = "#111827";
-    ctx.font = "12px Segoe UI";
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 12px Segoe UI";
     ctx.textAlign = "center";
-    ctx.fillText(String(v), x + barW / 2, y - 6);
+    ctx.fillText(String(v), x + barW / 2, y - 8);
 
-    // label
-    ctx.fillStyle = "#334155";
-    ctx.font = "11px Segoe UI";
-    ctx.textAlign = "center";
-    const lbl = labels[i] || "";
-    ctx.fillText(lbl, x + barW / 2, padT + chartH + 18);
+    ctx.fillStyle = "#475569";
+    ctx.font = "12px Segoe UI";
+    ctx.fillText(labels[i] || "", x + barW / 2, padT + chartH + 20);
   });
 }
 
-/** =======================
- *  APP STATE
- *  ======================= */
 let state = {
   user: null,
   isAdmin: false,
-  selectedMonth: currentMonthKey(), // YYYY-MM
+  selectedMonth: currentMonthKey(),
   selectedCallId: null,
-  calls: [], // current month calls
-  fields: [], // current month fields
+  calls: [],
+  fields: [],
 };
 
-/** =======================
- *  DOM + BOOTSTRAP
- *  ======================= */
 document.addEventListener("DOMContentLoaded", () => {
-  // ---- DOM refs
   const login = document.getElementById("login");
   const appDiv = document.getElementById("app");
 
@@ -174,6 +176,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const statsEl = document.getElementById("stats");
   const chartCanvas = document.getElementById("chart");
+  const toggleChart = document.getElementById("toggleChart");
+  const chartWrap = document.getElementById("chartWrap");
 
   const ime = document.getElementById("ime");
   const sifra = document.getElementById("sifra");
@@ -190,16 +194,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const fieldTable = document.getElementById("fieldTable");
   const manualField = document.getElementById("manualField");
 
-  // modal (call -> field)
   const modal = document.getElementById("modal");
   const datumTeren = document.getElementById("datumTeren");
   const vremeTeren = document.getElementById("vremeTeren");
   const confirmField = document.getElementById("confirmField");
   const cancelField = document.getElementById("cancelField");
 
-  // manual modal
   const manualModal = document.getElementById("manualModal");
   const mIme = document.getElementById("mIme");
+  const mAdresa = document.getElementById("mAdresa");
+  const mTelefon = document.getElementById("mTelefon");
   const mDatumTeren = document.getElementById("mDatumTeren");
   const mVremeTeren = document.getElementById("mVremeTeren");
   const mIshodTeren = document.getElementById("mIshodTeren");
@@ -207,11 +211,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const saveManualField = document.getElementById("saveManualField");
   const cancelManualField = document.getElementById("cancelManualField");
 
-  // defaults
+  let unsubCalls = null;
+  let unsubFields = null;
+  let chartVisible = false;
+
   datumPoziva.value = toYMD(new Date());
   monthPick.value = state.selectedMonth;
 
-  // ===== AUTH UI
   loginBtn.addEventListener("click", async () => {
     try {
       await signInWithEmailAndPassword(auth, email.value, password.value);
@@ -233,20 +239,18 @@ document.addEventListener("DOMContentLoaded", () => {
       appDiv.style.display = "block";
       logoutBtn.style.display = "inline-block";
       whoami.textContent = `${user.email}${state.isAdmin ? " (ADMIN)" : ""}`;
-      bootSubscriptions(); // start listeners
+      bootSubscriptions();
     } else {
       appDiv.style.display = "none";
       login.style.display = "block";
       logoutBtn.style.display = "none";
       whoami.textContent = "";
-      // ne čistimo state, ali UI svakako ide na login
     }
   });
 
-  // ===== MONTH / SORT / SEARCH
   monthPick.addEventListener("change", () => {
     state.selectedMonth = monthPick.value || currentMonthKey();
-    bootSubscriptions(); // restart queries for new month
+    bootSubscriptions();
   });
 
   monthToday.addEventListener("click", () => {
@@ -255,43 +259,62 @@ document.addEventListener("DOMContentLoaded", () => {
     bootSubscriptions();
   });
 
-  sortBy.addEventListener("change", () => {
-    renderCalls();
+  sortBy.addEventListener("change", renderCalls);
+  search.addEventListener("input", renderCalls);
+
+  toggleChart.addEventListener("click", () => {
+    chartVisible = !chartVisible;
+    chartWrap.style.display = chartVisible ? "block" : "none";
+    toggleChart.textContent = chartVisible ? "Sakrij grafikon" : "Prikaži grafikon";
+
+    if (chartVisible) {
+      renderChartAllMonths().catch(() => {});
+    }
   });
 
-  search.addEventListener("input", () => {
-    renderCalls();
-  });
-
-  // ===== ADD CALL
   addCall.addEventListener("click", async () => {
+    const imeVal = (ime.value || "").trim();
+    const sifraVal = (sifra.value || "").trim();
+    const adresaVal = (adresa.value || "").trim();
     const tel = (telefon.value || "").trim();
-    if (!tel) return alert("Unesi telefon.");
-    if (!datumPoziva.value) return alert("Unesi datum poziva.");
+    const datumVal = datumPoziva.value || "";
+    const ponudaVal = ponudaAgent.value || "";
+    const ishodVal = (ishod.value || "").trim();
 
-    // duplikat po telefonu (globalno)
+    if (!imeVal) return alert("Unesi ime i prezime.");
+    if (!sifraVal) return alert("Unesi šifru.");
+    if (!adresaVal) return alert("Unesi adresu.");
+    if (!tel) return alert("Unesi broj telefona.");
+    if (!datumVal) return alert("Unesi datum poziva.");
+    if (!ponudaVal) return alert("Izaberi ko je generisao ponudu.");
+    if (!ishodVal) return alert("Unesi ishod poziva.");
+
     const qDup = query(collection(db, "calls"), where("telefon", "==", tel));
     const snapDup = await getDocs(qDup);
     if (!snapDup.empty) return alert("Telefon već postoji!");
 
     await addDoc(collection(db, "calls"), {
-      ime: (ime.value || "").trim(),
-      sifra: (sifra.value || "").trim(),
-      adresa: (adresa.value || "").trim(),
+      ime: imeVal,
+      sifra: sifraVal,
+      adresa: adresaVal,
       telefon: tel,
-      datumPoziva: datumPoziva.value,
-      ponudaAgent: ponudaAgent.value || "",
-      ishod: (ishod.value || "").trim(),
+      datumPoziva: datumVal,
+      ponudaAgent: ponudaVal,
+      ishod: ishodVal,
       teren: false,
       statusPoziva: false,
       createdAt: Date.now(),
     });
 
-    // opciono očisti polja
-    // ime.value = sifra.value = adresa.value = telefon.value = ishod.value = "";
+    ime.value = "";
+    sifra.value = "";
+    adresa.value = "";
+    telefon.value = "";
+    ishod.value = "";
+    ponudaAgent.value = "";
+    datumPoziva.value = toYMD(new Date());
   });
 
-  // ===== MODAL: schedule field from call
   function openScheduleModal(callId) {
     state.selectedCallId = callId;
     modal.style.display = "block";
@@ -299,34 +322,42 @@ document.addEventListener("DOMContentLoaded", () => {
     datumTeren.value = toYMD(now);
     vremeTeren.value = "10:00";
   }
+
   function closeScheduleModal() {
     modal.style.display = "none";
     state.selectedCallId = null;
   }
+
   cancelField.addEventListener("click", closeScheduleModal);
 
   confirmField.addEventListener("click", async () => {
     if (!state.selectedCallId) return;
-
     if (!datumTeren.value) return alert("Unesi datum terena.");
     if (!vremeTeren.value) return alert("Unesi vreme terena.");
 
     const callRef = doc(db, "calls", state.selectedCallId);
     const callSnap = await getDoc(callRef);
+
     if (!callSnap.exists()) {
-      alert("Poziv ne postoji (obrisan).");
+      alert("Poziv ne postoji.");
       closeScheduleModal();
       return;
     }
 
     const c = callSnap.data();
 
-    // veza poziv -> teren + kopiranje ključnih podataka
+    if (!(c.ime || "").trim()) return alert("Poziv nema ime i prezime.");
+    if (!(c.sifra || "").trim()) return alert("Poziv nema šifru.");
+    if (!(c.adresa || "").trim()) return alert("Poziv nema adresu.");
+    if (!(c.telefon || "").trim()) return alert("Poziv nema broj telefona.");
+    if (!(c.ishod || "").trim()) return alert("Poziv nema ishod poziva.");
+
     await addDoc(collection(db, "fieldVisits"), {
       callId: state.selectedCallId,
       ime: c.ime || "",
       sifra: c.sifra || "",
       telefon: c.telefon || "",
+      adresa: c.adresa || "",
       ponudaAgent: c.ponudaAgent || "",
       datumTeren: datumTeren.value,
       vremeTeren: vremeTeren.value,
@@ -340,36 +371,49 @@ document.addEventListener("DOMContentLoaded", () => {
     closeScheduleModal();
   });
 
-  // ===== MANUAL FIELD MODAL
   function openManualModal() {
     manualModal.style.display = "block";
     const now = new Date();
     mDatumTeren.value = toYMD(now);
     mVremeTeren.value = "10:00";
     mIme.value = "";
+    mAdresa.value = "";
+    mTelefon.value = "";
     mIshodTeren.value = "";
     mRadniNalog.checked = false;
   }
+
   function closeManualModal() {
     manualModal.style.display = "none";
   }
+
   manualField.addEventListener("click", openManualModal);
   cancelManualField.addEventListener("click", closeManualModal);
 
   saveManualField.addEventListener("click", async () => {
-    if (!mIme.value.trim()) return alert("Unesi ime.");
-    if (!mDatumTeren.value) return alert("Unesi datum.");
-    if (!mVremeTeren.value) return alert("Unesi vreme.");
+    const imeVal = (mIme.value || "").trim();
+    const adresaVal = (mAdresa.value || "").trim();
+    const telefonVal = (mTelefon.value || "").trim();
+    const datumVal = mDatumTeren.value || "";
+    const vremeVal = mVremeTeren.value || "";
+    const ishodVal = (mIshodTeren.value || "").trim();
+
+    if (!imeVal) return alert("Unesi ime i prezime.");
+    if (!adresaVal) return alert("Unesi adresu.");
+    if (!telefonVal) return alert("Unesi broj telefona.");
+    if (!datumVal) return alert("Unesi datum.");
+    if (!vremeVal) return alert("Unesi vreme.");
 
     await addDoc(collection(db, "fieldVisits"), {
-      callId: "", // ručno nema veze
-      ime: mIme.value.trim(),
+      callId: "",
+      ime: imeVal,
       sifra: "",
-      telefon: "",
+      telefon: telefonVal,
+      adresa: adresaVal,
       ponudaAgent: "",
-      datumTeren: mDatumTeren.value,
-      vremeTeren: mVremeTeren.value,
-      ishodTeren: (mIshodTeren.value || "").trim(),
+      datumTeren: datumVal,
+      vremeTeren: vremeVal,
+      ishodTeren: ishodVal,
       radniNalog: !!mRadniNalog.checked,
       createdAt: Date.now(),
     });
@@ -377,18 +421,12 @@ document.addEventListener("DOMContentLoaded", () => {
     closeManualModal();
   });
 
-  // ===== FIRESTORE SUBSCRIPTIONS (restarted on month change)
-  let unsubCalls = null;
-  let unsubFields = null;
-
   function bootSubscriptions() {
-    // stop previous
     if (typeof unsubCalls === "function") unsubCalls();
     if (typeof unsubFields === "function") unsubFields();
 
     const { start, end } = monthRangeFromMonthKey(state.selectedMonth);
 
-    // Calls only for selected month
     const callsQ = query(
       collection(db, "calls"),
       where("datumPoziva", ">=", start),
@@ -401,7 +439,6 @@ document.addEventListener("DOMContentLoaded", () => {
       renderStats();
     });
 
-    // Fields only for selected month
     const fieldsQ = query(
       collection(db, "fieldVisits"),
       where("datumTeren", ">=", start),
@@ -414,11 +451,11 @@ document.addEventListener("DOMContentLoaded", () => {
       renderStats();
     });
 
-    // chart counts by months (all time)
-    renderChartAllMonths().catch(() => {});
+    if (chartVisible) {
+      renderChartAllMonths().catch(() => {});
+    }
   }
 
-  /** ===== RENDER: CALLS ===== */
   function sortCalls(arr) {
     const mode = sortBy.value || "datumPoziva_desc";
     const copy = [...arr];
@@ -426,14 +463,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const get = (o, k) => String(o?.[k] ?? "").toLowerCase();
 
     copy.sort((a, b) => {
-      const [key, dir] = mode.split("_"); // e.g. datumPoziva_desc
+      const [key, dir] = mode.split("_");
       let va = "", vb = "";
 
-      if (key === "datumPoziva") { va = a.datumPoziva || ""; vb = b.datumPoziva || ""; }
-      else if (key === "ime") { va = get(a, "ime"); vb = get(b, "ime"); }
-      else if (key === "telefon") { va = get(a, "telefon"); vb = get(b, "telefon"); }
-      else if (key === "statusPoziva") {
-        // true prvo ili false prvo
+      if (key === "datumPoziva") {
+        va = a.datumPoziva || "";
+        vb = b.datumPoziva || "";
+      } else if (key === "ime") {
+        va = get(a, "ime");
+        vb = get(b, "ime");
+      } else if (key === "telefon") {
+        va = get(a, "telefon");
+        vb = get(b, "telefon");
+      } else if (key === "statusPoziva") {
         va = a.statusPoziva ? "1" : "0";
         vb = b.statusPoziva ? "1" : "0";
       }
@@ -452,9 +494,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let filtered = state.calls;
     if (q) {
       filtered = filtered.filter((c) => {
-        const hay = [
-          c.ime, c.sifra, c.telefon, c.ponudaAgent, c.ishod
-        ].join(" ").toLowerCase();
+        const hay = [c.ime, c.sifra, c.telefon, c.ponudaAgent, c.ishod].join(" ").toLowerCase();
         return hay.includes(q);
       });
     }
@@ -463,8 +503,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     callsTable.innerHTML = "";
     sorted.forEach((c) => {
-      const terenBadge = c.teren ? `<span class="badge ok">Zakazan</span>` : `<span class="badge">-</span>`;
-      const statusBadge = c.statusPoziva ? `<span class="badge ok">Čekirano</span>` : `<span class="badge no">Nije</span>`;
+      const terenBadge = c.teren
+        ? `<span class="badge ok">Zakazan</span>`
+        : `<span class="badge">-</span>`;
+
+      const statusBadge = c.statusPoziva
+        ? `<span class="badge ok">Čekirano</span>`
+        : `<span class="badge no">Nije</span>`;
 
       const statusInput = state.isAdmin
         ? `<input type="checkbox" ${c.statusPoziva ? "checked" : ""} onchange="window._toggleStatusPoziva('${c.id}', this.checked)">`
@@ -472,7 +517,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const delBtn = state.isAdmin
         ? `<button class="danger" onclick="window._del('calls','${c.id}')">X</button>`
-        : ``;
+        : "";
 
       callsTable.innerHTML += `
         <tr class="${c.teren ? "green" : ""}">
@@ -492,15 +537,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /** ===== RENDER: FIELDS ===== */
   function renderFields() {
     fieldTable.innerHTML = "";
 
-    // sortiraj po datumu/vremenu
     const arr = [...state.fields].sort((a, b) => {
       const da = (a.datumTeren || "") + " " + (a.vremeTeren || "");
-      const db2 = (b.datumTeren || "") + " " + (b.vremeTeren || "");
-      return db2.localeCompare(da);
+      const db = (b.datumTeren || "") + " " + (b.vremeTeren || "");
+      return db.localeCompare(da);
     });
 
     arr.forEach((f) => {
@@ -511,7 +554,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const delBtn = state.isAdmin
         ? `<button class="danger" onclick="window._del('fieldVisits','${f.id}')">X</button>`
-        : ``;
+        : "";
 
       fieldTable.innerHTML += `
         <tr>
@@ -519,6 +562,8 @@ document.addEventListener("DOMContentLoaded", () => {
             ${escapeHtml(f.ime || "")}
             ${f.callId ? `<div class="small">vezan poziv</div>` : ``}
           </td>
+          <td>${escapeHtml(f.adresa || "")}</td>
+          <td>${escapeHtml(f.telefon || "")}</td>
           <td>${escapeHtml(f.datumTeren || "")}</td>
           <td>${escapeHtml(f.vremeTeren || "")}</td>
           <td><input value="${escapeAttr(f.ishodTeren || "")}" onchange="window._updateFieldIshod('${f.id}', this.value)"></td>
@@ -529,7 +574,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /** ===== STATS: ONLY SELECTED MONTH + BY AGENT ===== */
   function renderStats() {
     const calls = state.calls;
     const fields = state.fields;
@@ -538,7 +582,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const fieldsCount = fields.length;
     const conversion = callsCount ? ((fieldsCount / callsCount) * 100).toFixed(1) : "0.0";
 
-    // per agent: po "ponudaAgent"
     const byAgent = {};
     AGENTS.forEach((a) => (byAgent[a] = { calls: 0, fields: 0 }));
 
@@ -568,7 +611,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     statsEl.innerHTML = `
       <div class="stat">
-        <div style="font-size:14px;opacity:.9">Tekući prikaz (${state.selectedMonth})</div>
+        <div style="font-size:14px;opacity:.9">Prikaz (${state.selectedMonth})</div>
         <div style="font-size:22px;margin-top:6px">Pozivi: <b>${callsCount}</b></div>
         <div style="font-size:22px">Tereni: <b>${fieldsCount}</b></div>
         <div style="font-size:16px;opacity:.9;margin-top:6px">Konverzija: <b>${conversion}%</b></div>
@@ -577,11 +620,9 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-  /** ===== CHART: fields per month (all time) ===== */
   async function renderChartAllMonths() {
-    // uzmi sve fieldVisits (ako naraste mnogo, radićemo paginaciju / poslednjih 12 meseci)
     const snap = await getDocs(collection(db, "fieldVisits"));
-    const counts = new Map(); // YYYY-MM -> count
+    const counts = new Map();
 
     snap.forEach((d) => {
       const v = d.data();
@@ -590,20 +631,28 @@ document.addEventListener("DOMContentLoaded", () => {
       counts.set(k, (counts.get(k) || 0) + 1);
     });
 
-    // sort keys
-    const keys = Array.from(counts.keys()).sort(); // asc
-    // uzmi poslednjih 12
+    const keys = Array.from(counts.keys()).sort();
     const last = keys.slice(Math.max(0, keys.length - 12));
-    const labels = last.map((k) => k.slice(5)); // MM
-    const values = last.map((k) => counts.get(k) || 0);
 
+    const monthNames = {
+      "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr",
+      "05": "Maj", "06": "Jun", "07": "Jul", "08": "Avg",
+      "09": "Sep", "10": "Okt", "11": "Nov", "12": "Dec"
+    };
+
+    const labels = last.map((k) => {
+      const y = k.slice(2, 4);
+      const m = k.slice(5, 7);
+      return `${monthNames[m] || m} ${y}`;
+    });
+
+    const values = last.map((k) => counts.get(k) || 0);
     drawBarChart(chartCanvas, labels, values);
   }
 
-  /** =======================
-   *  WINDOW ACTIONS
-   *  ======================= */
-  window._schedule = (callId) => openScheduleModal(callId);
+  window._schedule = (callId) => {
+    openScheduleModal(callId);
+  };
 
   window._updateCallIshod = async (id, val) => {
     await updateDoc(doc(db, "calls", id), { ishod: val });
@@ -626,6 +675,22 @@ document.addEventListener("DOMContentLoaded", () => {
   window._del = async (col, id) => {
     if (!state.isAdmin) return;
     if (!confirm("Obrisati?")) return;
+
+    if (col === "fieldVisits") {
+      const fieldRef = doc(db, "fieldVisits", id);
+      const fieldSnap = await getDoc(fieldRef);
+
+      if (fieldSnap.exists()) {
+        const fieldData = fieldSnap.data();
+
+        if (fieldData.callId) {
+          await updateDoc(doc(db, "calls", fieldData.callId), {
+            teren: false
+          });
+        }
+      }
+    }
+
     await deleteDoc(doc(db, col, id));
   };
 });
