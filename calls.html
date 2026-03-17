@@ -1,103 +1,233 @@
 <!DOCTYPE html>
-<html>
+<html lang="sr">
 <head>
-<meta charset="UTF-8" />
-<title>Pozivi</title>
-
-<link rel="stylesheet" href="style.css">
-<link rel="manifest" href="manifest.json">
-
-<script type="module" src="app.js?v=ultimate1"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRM Evidencija • Pozivi</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <script type="module" src="app.js?v=ultimate-pro-1"></script>
 </head>
-
 <body data-page="calls">
 
-<header class="topbar">
-  <div class="logo">CRM</div>
+  <div id="bootScreen" class="boot-screen">
+    <div class="boot-card">
+      <div class="boot-logo">CRM</div>
+      <div class="boot-title">CRM Evidencija</div>
+      <div class="boot-subtitle">Učitavanje...</div>
+    </div>
+  </div>
 
-  <div class="top-actions">
+  <div id="loginView" class="login-wrap hidden">
+    <div class="login-card">
+      <div class="login-logo">CRM</div>
+      <h1>Prijava</h1>
+      <p>Prijavi se da pristupiš pozivima, terenima i statistici.</p>
 
-    <!-- 🔔 NOTIF -->
-    <div class="notif-wrap">
-      <button id="notifBtn" class="notif-btn">
-        🔔
-        <span id="notifBadge" class="notif-badge hidden">0</span>
-      </button>
+      <div class="form-grid">
+        <input id="email" type="email" placeholder="Email" autocomplete="username" />
+        <input id="password" type="password" placeholder="Lozinka" autocomplete="current-password" />
+        <button id="loginBtn" class="btn btn-primary btn-full">Login</button>
+      </div>
 
-      <div id="notifDropdown" class="notif-dropdown hidden">
-        <div class="notif-header"><b>Obaveštenja</b></div>
-        <div id="notifList" class="notif-list"></div>
+      <div class="login-note">
+        Admin može da briše, menja status poziva, radni nalog i realizovan teren.
       </div>
     </div>
-
-    <span id="whoami"></span>
-    <button id="logoutBtn">Logout</button>
-
   </div>
-</header>
 
-<div class="layout">
+  <div id="appView" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">CRM</div>
+        <div class="brand-text">
+          <strong>CRM Evidencija</strong>
+          <span>Pozivi · Tereni · Statistika</span>
+        </div>
+      </div>
 
-<aside class="sidebar">
-  <nav>
-    <a href="calls.html" class="active">📞 Pozivi</a>
-    <a href="fields.html">🚗 Tereni</a>
-    <a href="stats.html">📊 Statistika</a>
-  </nav>
-</aside>
+      <div class="sidebar-user">
+        <div class="sidebar-user-label">Ulogovan korisnik</div>
+        <div id="whoami" class="sidebar-user-email">—</div>
+      </div>
 
-<main class="main">
+      <nav class="sidebar-nav">
+        <a href="calls.html" data-nav="calls">
+          <span>📞 Pozivi</span>
+          <span id="navCallsCount" class="nav-pill">0</span>
+        </a>
+        <a href="fields.html" data-nav="fields">
+          <span>🚗 Tereni</span>
+          <span id="navFieldsCount" class="nav-pill">0</span>
+        </a>
+        <a href="stats.html" data-nav="stats">
+          <span>📊 Statistika</span>
+          <span id="navAlertsCount" class="nav-pill">0</span>
+        </a>
+      </nav>
 
-<div id="loginView" class="card">
-  <h3>Login</h3>
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
-  <button id="loginBtn">Login</button>
-</div>
+      <button id="logoutBtn" class="btn btn-secondary btn-full sidebar-logout">Logout</button>
+    </aside>
 
-<div id="appView" class="hidden">
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">Pozivi</h1>
+          <div class="page-subtitle">Dodavanje poziva, zakazivanje terena, status i praćenje.</div>
+        </div>
 
-<div class="card">
-  <h3>Dodaj poziv</h3>
+        <div class="topbar-actions">
+          <div class="notif-wrap">
+            <button id="notifBtn" class="btn btn-ghost notif-btn" type="button" aria-label="Obaveštenja">
+              🔔
+              <span id="notifBadge" class="notif-badge hidden">0</span>
+            </button>
 
-  <input id="ime" placeholder="Ime">
-  <input id="sifra" placeholder="Šifra">
-  <input id="adresa" placeholder="Adresa">
-  <input id="telefon" placeholder="Telefon">
-  <input type="date" id="datumPoziva">
+            <div id="notifDropdown" class="notif-dropdown hidden">
+              <div class="notif-header">
+                <strong>Obaveštenja</strong>
+              </div>
+              <div id="notifList" class="notif-list">
+                <div class="notif-empty">Nema obaveštenja.</div>
+              </div>
+            </div>
+          </div>
 
-  <select id="ponudaAgent">
-    <option value="">Agent</option>
-    <option>Marija</option>
-    <option>Slavko</option>
-    <option>Jovan</option>
-  </select>
+          <div class="month-control">
+            <label for="monthPick">Mesec</label>
+            <input type="month" id="monthPick" />
+            <button id="monthToday" class="btn btn-secondary" type="button">Danas</button>
+          </div>
+        </div>
+      </header>
 
-  <input id="ishod" placeholder="Ishod">
-  <button id="addCall">Dodaj</button>
-</div>
+      <section class="page-content">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Pozivi u mesecu</div>
+            <div id="kpiCalls" class="kpi-value">0</div>
+            <div class="kpi-meta">Ukupan broj poziva</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Zakazani tereni</div>
+            <div id="kpiScheduled" class="kpi-value">0</div>
+            <div class="kpi-meta">Pozivi sa zakazanim terenom</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Realizovani tereni</div>
+            <div id="kpiRealized" class="kpi-value">0</div>
+            <div class="kpi-meta">Uspešno završeni tereni</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Konverzija</div>
+            <div id="kpiConv" class="kpi-value">0.0%</div>
+            <div class="kpi-meta">Realizovani / Pozivi</div>
+          </div>
+        </div>
 
-<div class="card">
-  <input id="search" placeholder="Pretraga">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Dodaj poziv</h2>
+              <div class="card-subtitle">Sva polja kod poziva su obavezna.</div>
+            </div>
+          </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Ime</th>
-        <th>Telefon</th>
-        <th>Agent</th>
-        <th>Status</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="callsTable"></tbody>
-  </table>
-</div>
+          <div class="form-row">
+            <input id="ime" placeholder="Ime i prezime" />
+            <input id="sifra" placeholder="Šifra" />
+            <input id="adresa" placeholder="Adresa" />
+            <input id="telefon" placeholder="Telefon" />
+            <input id="datumPoziva" type="date" />
+            <select id="ponudaAgent">
+              <option value="">Generisao ponudu</option>
+              <option>Marija</option>
+              <option>Slavko</option>
+              <option>Jovan</option>
+            </select>
+            <input id="ishod" placeholder="Ishod poziva" />
+            <button id="addCall" class="btn btn-primary" type="button">Dodaj</button>
+          </div>
+        </div>
 
-</div>
+        <div class="card">
+          <div class="card-toolbar">
+            <div>
+              <h2>Lista poziva</h2>
+              <div class="card-subtitle">Pretraga i sortiranje po aktivnim stavkama.</div>
+            </div>
 
-</main>
-</div>
+            <div class="toolbar-actions">
+              <input id="search" placeholder="Pretraga (ime, telefon, šifra...)" />
+              <select id="sortBy">
+                <option value="datumPoziva_desc">Datum (novo → staro)</option>
+                <option value="datumPoziva_asc">Datum (staro → novo)</option>
+                <option value="ime_asc">Ime (A → Z)</option>
+                <option value="ime_desc">Ime (Z → A)</option>
+                <option value="telefon_asc">Telefon (A → Z)</option>
+                <option value="telefon_desc">Telefon (Z → A)</option>
+                <option value="statusPoziva_desc">Čekirano prvo</option>
+                <option value="statusPoziva_asc">Nečekirano prvo</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ime</th>
+                  <th>Šifra</th>
+                  <th>Telefon</th>
+                  <th>Adresa</th>
+                  <th>Agent</th>
+                  <th>Ishod</th>
+                  <th>Status poziva</th>
+                  <th>Status terena</th>
+                  <th>Akcija</th>
+                </tr>
+              </thead>
+              <tbody id="callsTable"></tbody>
+            </table>
+          </div>
+
+          <div class="legend">
+            <span class="badge badge-danger">Crveno = čekiran poziv</span>
+            <span class="badge badge-success">Zeleno = zakazan / realizovan teren</span>
+            <span class="badge badge-warning">Žuto = više nije zakazano</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Zakazi teren</h3>
+        <button id="cancelField" class="btn btn-ghost" type="button">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="card-subtitle">Datum i vreme su automatski postavljeni na danas i 10:00.</div>
+
+        <div class="modal-grid">
+          <div>
+            <label>Datum</label>
+            <input id="datumTeren" type="date" />
+          </div>
+          <div>
+            <label>Vreme</label>
+            <input id="vremeTeren" type="time" />
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="confirmField" class="btn btn-primary" type="button">Potvrdi</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
