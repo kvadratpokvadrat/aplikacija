@@ -1,60 +1,154 @@
 <!DOCTYPE html>
-<html>
+<html lang="sr">
 <head>
-<meta charset="UTF-8" />
-<title>Statistika</title>
-
-<link rel="stylesheet" href="style.css">
-<link rel="manifest" href="manifest.json">
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script type="module" src="app.js?v=ultimate1"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRM Evidencija • Statistika</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <script type="module" src="app.js?v=ultimate-pro-1"></script>
 </head>
-
 <body data-page="stats">
 
-<header class="topbar">
-  <div class="logo">CRM</div>
+  <div id="bootScreen" class="boot-screen">
+    <div class="boot-card">
+      <div class="boot-logo">CRM</div>
+      <div class="boot-title">CRM Evidencija</div>
+      <div class="boot-subtitle">Učitavanje...</div>
+    </div>
+  </div>
 
-  <div class="top-actions">
+  <div id="loginView" class="login-wrap hidden">
+    <div class="login-card">
+      <div class="login-logo">CRM</div>
+      <h1>Prijava</h1>
+      <p>Prijavi se da pristupiš statistici i analitici.</p>
 
-    <div class="notif-wrap">
-      <button id="notifBtn" class="notif-btn">
-        🔔
-        <span id="notifBadge" class="notif-badge hidden">0</span>
-      </button>
-
-      <div id="notifDropdown" class="notif-dropdown hidden">
-        <div class="notif-header"><b>Obaveštenja</b></div>
-        <div id="notifList" class="notif-list"></div>
+      <div class="form-grid">
+        <input id="email" type="email" placeholder="Email" autocomplete="username" />
+        <input id="password" type="password" placeholder="Lozinka" autocomplete="current-password" />
+        <button id="loginBtn" class="btn btn-primary btn-full">Login</button>
       </div>
     </div>
-
-    <span id="whoami"></span>
-    <button id="logoutBtn">Logout</button>
-
   </div>
-</header>
 
-<div class="layout">
+  <div id="appView" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">CRM</div>
+        <div class="brand-text">
+          <strong>CRM Evidencija</strong>
+          <span>Pozivi · Tereni · Statistika</span>
+        </div>
+      </div>
 
-<aside class="sidebar">
-  <nav>
-    <a href="calls.html">📞 Pozivi</a>
-    <a href="fields.html">🚗 Tereni</a>
-    <a href="stats.html" class="active">📊 Statistika</a>
-  </nav>
-</aside>
+      <div class="sidebar-user">
+        <div class="sidebar-user-label">Ulogovan korisnik</div>
+        <div id="whoami" class="sidebar-user-email">—</div>
+      </div>
 
-<main class="main">
+      <nav class="sidebar-nav">
+        <a href="calls.html" data-nav="calls">
+          <span>📞 Pozivi</span>
+          <span id="navCallsCount" class="nav-pill">0</span>
+        </a>
+        <a href="fields.html" data-nav="fields">
+          <span>🚗 Tereni</span>
+          <span id="navFieldsCount" class="nav-pill">0</span>
+        </a>
+        <a href="stats.html" data-nav="stats">
+          <span>📊 Statistika</span>
+          <span id="navAlertsCount" class="nav-pill">0</span>
+        </a>
+      </nav>
 
-<div class="card">
-  <h3>Grafikon realizacije</h3>
-  <canvas id="chart"></canvas>
-</div>
+      <button id="logoutBtn" class="btn btn-secondary btn-full sidebar-logout">Logout</button>
+    </aside>
 
-</main>
-</div>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">Statistika</h1>
+          <div class="page-subtitle">Pregled konverzije, agenata i realizovanih terena po mesecima.</div>
+        </div>
+
+        <div class="topbar-actions">
+          <div class="notif-wrap">
+            <button id="notifBtn" class="btn btn-ghost notif-btn" type="button" aria-label="Obaveštenja">
+              🔔
+              <span id="notifBadge" class="notif-badge hidden">0</span>
+            </button>
+
+            <div id="notifDropdown" class="notif-dropdown hidden">
+              <div class="notif-header">
+                <strong>Obaveštenja</strong>
+              </div>
+              <div id="notifList" class="notif-list">
+                <div class="notif-empty">Nema obaveštenja.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="month-control">
+            <label for="monthPick">Mesec</label>
+            <input type="month" id="monthPick" />
+            <button id="monthToday" class="btn btn-secondary" type="button">Danas</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="page-content">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Pozivi</div>
+            <div id="kpiCalls" class="kpi-value">0</div>
+            <div class="kpi-meta">Ukupan broj poziva</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Zakazani tereni</div>
+            <div id="kpiScheduled" class="kpi-value">0</div>
+            <div class="kpi-meta">Tereni vezani za pozive</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Realizovani tereni</div>
+            <div id="kpiRealized" class="kpi-value">0</div>
+            <div class="kpi-meta">Uspešno završeni tereni</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Konverzija</div>
+            <div id="kpiConv" class="kpi-value">0.0%</div>
+            <div class="kpi-meta">Realizovani / Pozivi</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <div>
+              <h2>Pregled po agentima</h2>
+              <div class="card-subtitle">Performanse po agentu za izabrani mesec.</div>
+            </div>
+          </div>
+
+          <div id="stats" class="agent-grid"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <div>
+              <h2>Grafikon realizovanih terena</h2>
+              <div class="card-subtitle">Poslednjih 12 meseci, samo realizovani tereni.</div>
+            </div>
+
+            <button id="toggleChart" class="btn btn-secondary" type="button">Prikaži grafikon</button>
+          </div>
+
+          <div id="chartWrap" class="chart-wrap hidden">
+            <canvas id="chart" width="1200" height="360"></canvas>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
 
 </body>
 </html>
