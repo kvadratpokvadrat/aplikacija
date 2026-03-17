@@ -1086,4 +1086,35 @@ document.addEventListener("DOMContentLoaded", () => {
       renderChartAllMonths().catch(() => {});
     }
   };
+function renderCalendar(){
+  const cal = qs("calendar");
+  if(!cal) return;
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+
+  cal.innerHTML = "";
+  cal.className = "calendar";
+
+  for(let i=0;i<firstDay;i++){
+    cal.innerHTML += `<div></div>`;
+  }
+
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+
+    const events = state.fields.filter(f => f.datumTeren === dateStr);
+
+    cal.innerHTML += `
+      <div class="day">
+        <div class="day-header">${d}</div>
+        ${events.map(e=>`<div class="event">${e.ime}</div>`).join("")}
+      </div>
+    `;
+  }
+};
 });
