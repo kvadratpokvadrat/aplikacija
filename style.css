@@ -522,4 +522,74 @@ tr.red td{
   .nav-badge{
     display:none;
   }
+  .alerts{
+  display:grid;
+  gap:12px;
+  margin-bottom:18px;
+}
+
+.alert-box{
+  background:linear-gradient(180deg,#fff7ed 0%, #fffbeb 100%);
+  border:1px solid #fed7aa;
+  border-left:6px solid #f97316;
+  border-radius:18px;
+  padding:16px;
+  box-shadow:var(--shadow);
+}
+
+.alert-box h3{
+  margin:0 0 8px;
+  font-size:18px;
+  color:#9a3412;
+}
+
+.alert-line{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  padding:10px 0;
+  border-top:1px dashed #fdba74;
+}
+
+.alert-line:first-of-type{
+  border-top:none;
+  padding-top:0;
+}
+
+.alert-meta{
+  font-size:12px;
+  color:#7c2d12;
+}
+
+.alert-empty{
+  background:linear-gradient(180deg,#f0fdf4 0%, #f7fee7 100%);
+  border:1px solid #bbf7d0;
+  border-left:6px solid #22c55e;
+  border-radius:18px;
+  padding:16px;
+  color:#166534;
+  box-shadow:var(--shadow);
+}
+
+.pulse-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:28px;
+  height:24px;
+  padding:0 8px;
+  border-radius:999px;
+  background:#dc2626;
+  color:#fff;
+  font-size:12px;
+  font-weight:700;
+  animation:pulseNotif 1.6s infinite;
+}
+
+@keyframes pulseNotif{
+  0%{box-shadow:0 0 0 0 rgba(220,38,38,.45)}
+  70%{box-shadow:0 0 0 10px rgba(220,38,38,0)}
+  100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}
+}
 }
