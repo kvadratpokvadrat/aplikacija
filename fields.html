@@ -1,74 +1,209 @@
 <!DOCTYPE html>
-<html>
+<html lang="sr">
 <head>
-<meta charset="UTF-8" />
-<title>Tereni</title>
-
-<link rel="stylesheet" href="style.css">
-<link rel="manifest" href="manifest.json">
-
-<script type="module" src="app.js?v=ultimate1"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRM Evidencija • Tereni</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <script type="module" src="app.js?v=ultimate-pro-1"></script>
 </head>
-
 <body data-page="fields">
 
-<header class="topbar">
-  <div class="logo">CRM</div>
+  <div id="bootScreen" class="boot-screen">
+    <div class="boot-card">
+      <div class="boot-logo">CRM</div>
+      <div class="boot-title">CRM Evidencija</div>
+      <div class="boot-subtitle">Učitavanje...</div>
+    </div>
+  </div>
 
-  <div class="top-actions">
+  <div id="loginView" class="login-wrap hidden">
+    <div class="login-card">
+      <div class="login-logo">CRM</div>
+      <h1>Prijava</h1>
+      <p>Prijavi se da pristupiš terenima i evidenciji.</p>
 
-    <div class="notif-wrap">
-      <button id="notifBtn" class="notif-btn">
-        🔔
-        <span id="notifBadge" class="notif-badge hidden">0</span>
-      </button>
+      <div class="form-grid">
+        <input id="email" type="email" placeholder="Email" autocomplete="username" />
+        <input id="password" type="password" placeholder="Lozinka" autocomplete="current-password" />
+        <button id="loginBtn" class="btn btn-primary btn-full">Login</button>
+      </div>
 
-      <div id="notifDropdown" class="notif-dropdown hidden">
-        <div class="notif-header"><b>Obaveštenja</b></div>
-        <div id="notifList" class="notif-list"></div>
+      <div class="login-note">
+        Admin može da briše, menja radni nalog i realizaciju terena.
       </div>
     </div>
-
-    <span id="whoami"></span>
-    <button id="logoutBtn">Logout</button>
-
   </div>
-</header>
 
-<div class="layout">
+  <div id="appView" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">CRM</div>
+        <div class="brand-text">
+          <strong>CRM Evidencija</strong>
+          <span>Pozivi · Tereni · Statistika</span>
+        </div>
+      </div>
 
-<aside class="sidebar">
-  <nav>
-    <a href="calls.html">📞 Pozivi</a>
-    <a href="fields.html" class="active">🚗 Tereni</a>
-    <a href="stats.html">📊 Statistika</a>
-  </nav>
-</aside>
+      <div class="sidebar-user">
+        <div class="sidebar-user-label">Ulogovan korisnik</div>
+        <div id="whoami" class="sidebar-user-email">—</div>
+      </div>
 
-<main class="main">
+      <nav class="sidebar-nav">
+        <a href="calls.html" data-nav="calls">
+          <span>📞 Pozivi</span>
+          <span id="navCallsCount" class="nav-pill">0</span>
+        </a>
+        <a href="fields.html" data-nav="fields">
+          <span>🚗 Tereni</span>
+          <span id="navFieldsCount" class="nav-pill">0</span>
+        </a>
+        <a href="stats.html" data-nav="stats">
+          <span>📊 Statistika</span>
+          <span id="navAlertsCount" class="nav-pill">0</span>
+        </a>
+      </nav>
 
-<!-- 📅 KALENDAR -->
-<div class="card">
-  <h3>Kalendar terena</h3>
-  <div id="calendar"></div>
-</div>
+      <button id="logoutBtn" class="btn btn-secondary btn-full sidebar-logout">Logout</button>
+    </aside>
 
-<div class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>Ime</th>
-        <th>Telefon</th>
-        <th>Datum</th>
-        <th>Realizovan</th>
-      </tr>
-    </thead>
-    <tbody id="fieldTable"></tbody>
-  </table>
-</div>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">Tereni</h1>
+          <div class="page-subtitle">Pregled, ručni unos, kalendar i realizacija terena.</div>
+        </div>
 
-</main>
-</div>
+        <div class="topbar-actions">
+          <div class="notif-wrap">
+            <button id="notifBtn" class="btn btn-ghost notif-btn" type="button" aria-label="Obaveštenja">
+              🔔
+              <span id="notifBadge" class="notif-badge hidden">0</span>
+            </button>
+
+            <div id="notifDropdown" class="notif-dropdown hidden">
+              <div class="notif-header">
+                <strong>Obaveštenja</strong>
+              </div>
+              <div id="notifList" class="notif-list">
+                <div class="notif-empty">Nema obaveštenja.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="month-control">
+            <label for="monthPick">Mesec</label>
+            <input type="month" id="monthPick" />
+            <button id="monthToday" class="btn btn-secondary" type="button">Danas</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="page-content">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Tereni u mesecu</div>
+            <div id="kpiFields" class="kpi-value">0</div>
+            <div class="kpi-meta">Ukupan broj terena</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Vezani za poziv</div>
+            <div id="kpiLinkedFields" class="kpi-value">0</div>
+            <div class="kpi-meta">Tereni nastali iz poziva</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Realizovani</div>
+            <div id="kpiRealized" class="kpi-value">0</div>
+            <div class="kpi-meta">Uspešno završeni tereni</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Radni nalog</div>
+            <div id="kpiRN" class="kpi-value">0</div>
+            <div class="kpi-meta">Tereni sa radnim nalogom</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <div>
+              <h2>Kalendar terena</h2>
+              <div class="card-subtitle">Pregled zakazanih terena po danima za izabrani mesec.</div>
+            </div>
+          </div>
+
+          <div id="calendarHead" class="calendar-head"></div>
+          <div id="calendar" class="calendar-grid"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <div>
+              <h2>Lista terena</h2>
+              <div class="card-subtitle">Ručno dodavanje, radni nalog i realizacija.</div>
+            </div>
+
+            <div class="toolbar-actions">
+              <input id="fieldSearch" placeholder="Pretraga (ime, telefon, adresa...)" />
+              <button id="manualField" class="btn btn-secondary" type="button">Dodaj ručno teren</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ime</th>
+                  <th>Adresa</th>
+                  <th>Telefon</th>
+                  <th>Datum</th>
+                  <th>Vreme</th>
+                  <th>Ishod</th>
+                  <th>Radni nalog</th>
+                  <th>Realizovan</th>
+                  <th>Veza</th>
+                  <th>Akcija</th>
+                </tr>
+              </thead>
+              <tbody id="fieldTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="manualModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Ručno dodaj teren</h3>
+        <button id="cancelManualField" class="btn btn-ghost" type="button">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="card-subtitle">Obavezni su ime, adresa, telefon, datum i vreme. Ishod može ostati prazan.</div>
+
+        <div class="modal-grid">
+          <input id="mIme" placeholder="Ime i prezime" />
+          <input id="mAdresa" placeholder="Adresa" />
+          <input id="mTelefon" placeholder="Telefon" />
+          <input id="mDatumTeren" type="date" />
+          <input id="mVremeTeren" type="time" />
+          <input id="mIshodTeren" placeholder="Ishod terena" />
+        </div>
+
+        <label class="checkbox-line">
+          <input id="mRadniNalog" type="checkbox" />
+          <span>Radni nalog</span>
+        </label>
+      </div>
+
+      <div class="modal-footer">
+        <button id="saveManualField" class="btn btn-primary" type="button">Sačuvaj</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
