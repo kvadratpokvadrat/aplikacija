@@ -187,6 +187,126 @@ function drawBarChart(canvas, labels, values) {
   });
 }
 
+function daysDiffFromToday(ymd) {
+  if (!ymd) return 0;
+  const today = new Date();
+  const d = new Date(`${ymd}T00:00:00`);
+  const now = new Date(`${toYMD(today)}T00:00:00`);
+  const diffMs = now - d;
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+}
+
+function getStaleItems() {
+  const staleCalls = state.calls.filter((c) => {
+    const days = daysDiffFromToday(c.datumPoziva);
+    return !c.statusPoziva && days > 3;
+  });
+
+  const staleFields = state.fields.filter((f) => {
+    const days = daysDiffFromToday(f.datumTeren);
+    return !f.realizovan && days > 3;
+  });
+
+  return { staleCalls, staleFields };
+}
+
+function renderAlerts() {
+  const alertsWrap = qs("alertsWrap");
+  if (!alertsWrap) return;
+
+  const { staleCalls, staleFields } = getStaleItems();
+  const total = staleCalls.length + staleFields.length;
+
+  setText("navAlertsCount", total);
+
+  if (!total) {
+    alertsWrap.innerHTML = `
+      <div class="alert-empty">
+        Nema stavki starijih od 3 dana bez aktivnosti.
+      </div>
+    `;
+    return;
+  }
+
+  const callLines = staleCalls.slice(0, 8).map((c) => {
+    const days = daysDiffFromToday(c.datumPoziva);
+    return `
+      <div class="alert-line">
+        <div>
+          <b>${escapeHtml(c.ime || "Bez imena")}</b>
+          <div class="alert-meta">
+            Poziv · ${escapeHtml(c.telefon || "-")} · ${escapeHtml(c.datumPoziva || "-")} · kasni ${days} dana
+          </div>
+        </div>
+        <div>
+          <span class="badge no">Nije čekiran</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const fieldLines = staleFields.slice(0, 8).map((f) => {
+    const days = daysDiffFromToday(f.datumTeren);
+    return `
+      <div class="alert-line">
+        <div>
+          <b>${escapeHtml(f.ime || "Bez imena")}</b>
+          <div class="alert-meta">
+            Teren · ${escapeHtml(f.telefon || "-")} · ${escapeHtml(f.datumTeren || "-")} · kasni ${days} dana
+          </div>
+        </div>
+        <div>
+          <span class="badge warn">Nije realizovan</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  alertsWrap.innerHTML = `
+    <div class="alert-box">
+      <h3>Obaveštenja (${total})</h3>
+      ${staleCalls.length ? `
+        <div style="margin:10px 0 6px;font-weight:700">Pozivi bez aktivnosti duže od 3 dana</div>
+        ${callLines}
+      ` : ``}
+      ${staleFields.length ? `
+        <div style="margin:14px 0 6px;font-weight:700">Tereni bez realizacije duže od 3 dana</div>
+        ${fieldLines}
+      ` : ``}
+    </div>
+  `;
+}
+
+let lastNotificationKey = "";
+
+function maybeBrowserNotify() {
+  const { staleCalls, staleFields } = getStaleItems();
+  const total = staleCalls.length + staleFields.length;
+
+  if (!total) return;
+  if (!("Notification" in window)) return;
+
+  const key = `${staleCalls.length}-${staleFields.length}`;
+  if (lastNotificationKey === key) return;
+
+  const show = () => {
+    try {
+      new Notification("CRM obaveštenje", {
+        body: `Imaš ${staleCalls.length} poziva i ${staleFields.length} terena bez aktivnosti duže od 3 dana.`,
+      });
+      lastNotificationKey = key;
+    } catch (_) {}
+  };
+
+  if (Notification.permission === "granted") {
+    show();
+  } else if (Notification.permission !== "denied") {
+    Notification.requestPermission().then((perm) => {
+      if (perm === "granted") show();
+    });
+  }
+}
+
 let state = {
   user: null,
   isAdmin: false,
@@ -516,9 +636,12 @@ document.addEventListener("DOMContentLoaded", () => {
     unsubCalls = onSnapshot(callsQ, (snap) => {
       state.calls = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       renderCalls();
+      renderFields();
       renderStats();
       renderMiniStats();
       updateNavCounts();
+      renderAlerts();
+      maybeBrowserNotify();
     });
 
     const fieldsQ = query(
@@ -529,10 +652,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     unsubFields = onSnapshot(fieldsQ, (snap) => {
       state.fields = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderCalls();
       renderFields();
       renderStats();
       renderMiniStats();
       updateNavCounts();
+      renderAlerts();
+      maybeBrowserNotify();
     });
 
     if (chartVisible) {
@@ -782,10 +908,6 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
     }).join("");
-
-    if (!AGENTS.length) {
-      statsEl.innerHTML = `<div class="empty-state">Nema statistike za prikaz.</div>`;
-    }
   }
 
   async function renderChartAllMonths() {
@@ -826,6 +948,15 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateNavCounts() {
     setText("navCallsCount", state.calls.length);
     setText("navFieldsCount", state.fields.length);
+
+    const { staleCalls, staleFields } = getStaleItems();
+    const totalAlerts = staleCalls.length + staleFields.length;
+    setText("navAlertsCount", totalAlerts);
+
+    const navAlerts = qs("navAlertsCount");
+    if (navAlerts) {
+      navAlerts.className = totalAlerts > 0 ? "pulse-badge" : "nav-badge";
+    }
   }
 
   window._schedule = (callId) => {
