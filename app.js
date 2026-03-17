@@ -32,7 +32,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// OVDE upiši admin email(ove)
 const ADMIN_EMAILS = [
   "stefanbarac@gmail.com",
 ];
@@ -88,10 +87,10 @@ function drawBarChart(canvas, labels, values) {
 
   ctx.clearRect(0, 0, W, H);
 
-  const padL = 55;
+  const padL = 60;
   const padR = 20;
-  const padT = 25;
-  const padB = 45;
+  const padT = 20;
+  const padB = 55;
 
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
@@ -101,15 +100,17 @@ function drawBarChart(canvas, labels, values) {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, W, H);
 
-  const steps = 5;
   ctx.strokeStyle = "#e5e7eb";
   ctx.lineWidth = 1;
+
+  const steps = 5;
   ctx.font = "12px Segoe UI";
   ctx.fillStyle = "#64748b";
   ctx.textAlign = "right";
 
   for (let i = 0; i <= steps; i++) {
     const y = padT + (chartH / steps) * i;
+
     ctx.beginPath();
     ctx.moveTo(padL, y);
     ctx.lineTo(padL + chartW, y);
@@ -133,10 +134,14 @@ function drawBarChart(canvas, labels, values) {
 
   values.forEach((v, i) => {
     const x = padL + i * (barW + gap);
-    const h = Math.round((v / maxVal) * (chartH - 8));
+    const h = Math.round((v / maxVal) * (chartH - 10));
     const y = padT + chartH - h;
 
-    ctx.fillStyle = "#2563eb";
+    const gradient = ctx.createLinearGradient(0, y, 0, padT + chartH);
+    gradient.addColorStop(0, "#2563eb");
+    gradient.addColorStop(1, "#60a5fa");
+
+    ctx.fillStyle = gradient;
     ctx.fillRect(x, y, barW, h);
 
     ctx.fillStyle = "#0f172a";
@@ -303,6 +308,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ishod: ishodVal,
       teren: false,
       statusPoziva: false,
+      statusTerena: "nije_zakazano",
       createdAt: Date.now(),
     });
 
@@ -369,13 +375,14 @@ document.addEventListener("DOMContentLoaded", () => {
       vremeTeren: vremeTeren.value,
       ishodTeren: "",
       radniNalog: false,
+      realizovan: false,
       createdAt: Date.now(),
     });
 
-    const callSnapAfter = await getDoc(callRef);
-    if (callSnapAfter.exists()) {
-      await updateDoc(callRef, { teren: true });
-    }
+    await updateDoc(callRef, {
+      teren: true,
+      statusTerena: "zakazan",
+    });
 
     closeScheduleModal();
   });
@@ -424,6 +431,7 @@ document.addEventListener("DOMContentLoaded", () => {
       vremeTeren: vremeVal,
       ishodTeren: ishodVal,
       radniNalog: !!mRadniNalog.checked,
+      realizovan: false,
       createdAt: Date.now(),
     });
 
@@ -468,7 +476,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function sortCalls(arr) {
     const mode = sortBy.value || "datumPoziva_desc";
     const copy = [...arr];
-
     const get = (o, k) => String(o?.[k] ?? "").toLowerCase();
 
     copy.sort((a, b) => {
@@ -497,13 +504,34 @@ document.addEventListener("DOMContentLoaded", () => {
     return copy;
   }
 
+  function getTerenBadge(call) {
+    if (call.statusTerena === "realizovan") {
+      return `<span class="badge ok">Realizovan</span>`;
+    }
+    if (call.statusTerena === "zakazan" || call.teren === true) {
+      return `<span class="badge ok">Zakazan</span>`;
+    }
+    if (call.statusTerena === "otkazan" || call.statusTerena === "nije_zakazano") {
+      return `<span class="badge no">Više nije zakazano</span>`;
+    }
+    return `<span class="badge">-</span>`;
+  }
+
   function renderCalls() {
     const q = (search.value || "").toLowerCase().trim();
 
     let filtered = state.calls;
     if (q) {
       filtered = filtered.filter((c) => {
-        const hay = [c.ime, c.sifra, c.telefon, c.ponudaAgent, c.ishod].join(" ").toLowerCase();
+        const hay = [
+          c.ime,
+          c.sifra,
+          c.telefon,
+          c.ponudaAgent,
+          c.ishod,
+          c.adresa,
+          c.statusTerena
+        ].join(" ").toLowerCase();
         return hay.includes(q);
       });
     }
@@ -512,9 +540,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     callsTable.innerHTML = "";
     sorted.forEach((c) => {
-      const terenBadge = c.teren
-        ? `<span class="badge ok">Zakazan</span>`
-        : `<span class="badge">-</span>`;
+      const terenBadge = getTerenBadge(c);
 
       const statusBadge = c.statusPoziva
         ? `<span class="badge ok">Čekirano</span>`
@@ -533,7 +559,7 @@ document.addEventListener("DOMContentLoaded", () => {
         : `<button onclick="window._schedule('${c.id}')">Teren</button>`;
 
       callsTable.innerHTML += `
-        <tr class="${c.statusPoziva ? "red" : (c.teren ? "green" : "")}">
+        <tr class="${c.statusPoziva ? "red" : (c.statusTerena === "realizovan" ? "green" : (c.teren ? "green" : ""))}">
           <td>${escapeHtml(c.ime || "")}</td>
           <td>${escapeHtml(c.sifra || "")}</td>
           <td>${escapeHtml(c.telefon || "")}</td>
@@ -561,16 +587,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     arr.forEach((f) => {
       const rn = !!f.radniNalog;
+      const realizovan = !!f.realizovan;
+
       const rnCell = state.isAdmin
         ? `<input type="checkbox" ${rn ? "checked" : ""} onchange="window._toggleRadniNalog('${f.id}', this.checked)">`
         : (rn ? `<span class="badge ok">DA</span>` : `<span class="badge">NE</span>`);
+
+      const realizovanCell = state.isAdmin
+        ? `<input type="checkbox" ${realizovan ? "checked" : ""} onchange="window._toggleRealizovan('${f.id}', this.checked)">`
+        : (realizovan ? `<span class="badge ok">DA</span>` : `<span class="badge">NE</span>`);
 
       const delBtn = state.isAdmin
         ? `<button class="danger" onclick="window._del('fieldVisits','${f.id}')">X</button>`
         : "";
 
       fieldTable.innerHTML += `
-        <tr>
+        <tr class="${realizovan ? "green" : ""}">
           <td>
             ${escapeHtml(f.ime || "")}
             ${f.callId ? `<div class="small">vezan poziv</div>` : ``}
@@ -581,6 +613,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <td>${escapeHtml(f.vremeTeren || "")}</td>
           <td><input value="${escapeAttr(f.ishodTeren || "")}" onchange="window._updateFieldIshod('${f.id}', this.value)"></td>
           <td style="text-align:center">${rnCell}</td>
+          <td style="text-align:center">${realizovanCell}</td>
           <td>${delBtn}</td>
         </tr>
       `;
@@ -590,13 +623,15 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderStats() {
     const calls = state.calls;
     const fields = state.fields;
+    const realizedFields = fields.filter(f => !!f.realizovan);
 
     const callsCount = calls.length;
     const fieldsCount = fields.length;
-    const conversion = callsCount ? ((fieldsCount / callsCount) * 100).toFixed(1) : "0.0";
+    const realizedCount = realizedFields.length;
+    const conversion = callsCount ? ((realizedCount / callsCount) * 100).toFixed(1) : "0.0";
 
     const byAgent = {};
-    AGENTS.forEach((a) => (byAgent[a] = { calls: 0, fields: 0 }));
+    AGENTS.forEach((a) => (byAgent[a] = { calls: 0, scheduled: 0, realized: 0 }));
 
     calls.forEach((c) => {
       const a = c.ponudaAgent || "";
@@ -605,18 +640,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     fields.forEach((f) => {
       const a = f.ponudaAgent || "";
-      if (byAgent[a]) byAgent[a].fields += 1;
+      if (byAgent[a]) byAgent[a].scheduled += 1;
+      if (byAgent[a] && f.realizovan) byAgent[a].realized += 1;
     });
 
     const agentBlocks = AGENTS.map((a) => {
       const ac = byAgent[a].calls;
-      const af = byAgent[a].fields;
-      const conv = ac ? ((af / ac) * 100).toFixed(1) : "0.0";
+      const as = byAgent[a].scheduled;
+      const ar = byAgent[a].realized;
+      const conv = ac ? ((ar / ac) * 100).toFixed(1) : "0.0";
+
       return `
         <div class="stat">
           <div style="font-size:14px;opacity:.9">${escapeHtml(a)}</div>
           <div style="font-size:18px;margin-top:6px">Pozivi: <b>${ac}</b></div>
-          <div style="font-size:18px">Tereni: <b>${af}</b></div>
+          <div style="font-size:18px">Zakazani tereni: <b>${as}</b></div>
+          <div style="font-size:18px">Realizovani: <b>${ar}</b></div>
           <div style="font-size:14px;opacity:.9;margin-top:6px">Konverzija: <b>${conv}%</b></div>
         </div>
       `;
@@ -626,7 +665,8 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="stat">
         <div style="font-size:14px;opacity:.9">Prikaz (${state.selectedMonth})</div>
         <div style="font-size:22px;margin-top:6px">Pozivi: <b>${callsCount}</b></div>
-        <div style="font-size:22px">Tereni: <b>${fieldsCount}</b></div>
+        <div style="font-size:22px">Zakazani tereni: <b>${fieldsCount}</b></div>
+        <div style="font-size:22px">Realizovani: <b>${realizedCount}</b></div>
         <div style="font-size:16px;opacity:.9;margin-top:6px">Konverzija: <b>${conversion}%</b></div>
       </div>
       ${agentBlocks}
@@ -639,8 +679,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     snap.forEach((d) => {
       const v = d.data();
+      if (!v.realizovan) return;
+
       const k = monthKeyFromYMD(v.datumTeren);
       if (!k) return;
+
       counts.set(k, (counts.get(k) || 0) + 1);
     });
 
@@ -670,43 +713,85 @@ document.addEventListener("DOMContentLoaded", () => {
   window._updateCallIshod = async (id, val) => {
     const callRef = doc(db, "calls", id);
     const callSnap = await getDoc(callRef);
+
     if (!callSnap.exists()) {
       alert("Poziv više ne postoji.");
       return;
     }
+
     await updateDoc(callRef, { ishod: val });
   };
 
   window._toggleStatusPoziva = async (id, checked) => {
     if (!state.isAdmin) return;
+
     const callRef = doc(db, "calls", id);
     const callSnap = await getDoc(callRef);
+
     if (!callSnap.exists()) {
       alert("Poziv više ne postoji.");
       return;
     }
+
     await updateDoc(callRef, { statusPoziva: !!checked });
   };
 
   window._updateFieldIshod = async (id, val) => {
     const fieldRef = doc(db, "fieldVisits", id);
     const fieldSnap = await getDoc(fieldRef);
+
     if (!fieldSnap.exists()) {
       alert("Teren više ne postoji.");
       return;
     }
+
     await updateDoc(fieldRef, { ishodTeren: val });
   };
 
   window._toggleRadniNalog = async (id, checked) => {
     if (!state.isAdmin) return;
+
     const fieldRef = doc(db, "fieldVisits", id);
     const fieldSnap = await getDoc(fieldRef);
+
     if (!fieldSnap.exists()) {
       alert("Teren više ne postoji.");
       return;
     }
+
     await updateDoc(fieldRef, { radniNalog: !!checked });
+  };
+
+  window._toggleRealizovan = async (id, checked) => {
+    if (!state.isAdmin) return;
+
+    const fieldRef = doc(db, "fieldVisits", id);
+    const fieldSnap = await getDoc(fieldRef);
+
+    if (!fieldSnap.exists()) {
+      alert("Teren više ne postoji.");
+      return;
+    }
+
+    const fieldData = fieldSnap.data();
+
+    await updateDoc(fieldRef, { realizovan: !!checked });
+
+    if (fieldData.callId) {
+      const callRef = doc(db, "calls", fieldData.callId);
+      const callSnap = await getDoc(callRef);
+
+      if (callSnap.exists()) {
+        await updateDoc(callRef, {
+          statusTerena: checked ? "realizovan" : "zakazan",
+          teren: true,
+        });
+      }
+    }
+
+    if (chartVisible) {
+      renderChartAllMonths().catch(() => {});
+    }
   };
 
   window._del = async (col, id) => {
@@ -725,7 +810,10 @@ document.addEventListener("DOMContentLoaded", () => {
           const callSnap = await getDoc(callRef);
 
           if (callSnap.exists()) {
-            await updateDoc(callRef, { teren: false });
+            await updateDoc(callRef, {
+              teren: false,
+              statusTerena: "otkazan",
+            });
           }
         }
       }
@@ -734,6 +822,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (col === "calls") {
       const callRef = doc(db, "calls", id);
       const callSnap = await getDoc(callRef);
+
       if (!callSnap.exists()) {
         alert("Poziv više ne postoji.");
         return;
@@ -742,11 +831,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const ref = doc(db, col, id);
     const snap = await getDoc(ref);
+
     if (!snap.exists()) {
       alert("Dokument više ne postoji.");
       return;
     }
 
     await deleteDoc(ref);
+
+    if (chartVisible) {
+      renderChartAllMonths().catch(() => {});
+    }
   };
 });
