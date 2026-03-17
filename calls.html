@@ -1,201 +1,99 @@
 <!DOCTYPE html>
-<html lang="sr">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CRM Evidencija - Pozivi</title>
-  <link rel="stylesheet" href="style.css" />
-  <script type="module" src="app.js?v=pro2"></script>
+<meta charset="UTF-8" />
+<title>Pozivi</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js?v=final"></script>
 </head>
+
 <body data-page="calls">
 
-  <div id="bootScreen" class="login-wrap">
-    <div class="login-card" style="max-width:380px;text-align:center">
-      <h2>CRM Evidencija</h2>
-      <p>Učitavanje...</p>
-    </div>
-  </div>
+<header class="topbar">
+  <div class="logo">CRM</div>
 
-  <div id="loginView" class="login-wrap hidden">
-    <div class="login-card">
-      <h2>CRM Evidencija</h2>
-      <p>Prijavi se da pristupiš pozivima, terenima i statistici.</p>
-      <div class="stack">
-        <input id="email" placeholder="Email" autocomplete="username" />
-        <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
-        <button id="loginBtn">Login</button>
-        <div class="small">Admin može da briše, čekira status poziva, radni nalog i realizovan teren.</div>
+  <div class="top-actions">
+
+    <div class="notif-wrap">
+      <button id="notifBtn" class="notif-btn">
+        🔔
+        <span id="notifBadge" class="notif-badge hidden">0</span>
+      </button>
+
+      <div id="notifDropdown" class="notif-dropdown hidden">
+        <div class="notif-header"><b>Obaveštenja</b></div>
+        <div id="notifList" class="notif-list"></div>
       </div>
     </div>
+
+    <span id="whoami"></span>
+    <button id="logoutBtn">Logout</button>
+
   </div>
+</header>
 
-  <div id="appView" class="shell hidden">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">CRM</div>
-        <div class="brand-text">
-          <b>Evidencija</b>
-          <span>Pozivi · Tereni · Statistika</span>
-        </div>
-      </div>
+<div class="layout">
 
-      <div class="userbox">
-        <div id="whoami" class="small">—</div>
-      </div>
+<aside class="sidebar">
+  <nav>
+    <a href="calls.html" class="active">📞 Pozivi</a>
+    <a href="fields.html">🚗 Tereni</a>
+    <a href="stats.html">📊 Statistika</a>
+  </nav>
+</aside>
 
-      <nav class="nav">
-  <a href="calls.html" data-nav="calls">
-    <span class="label">📞 Pozivi</span>
-    <span id="navCallsCount" class="nav-badge">0</span>
-  </a>
-  <a href="fields.html" data-nav="fields">
-    <span class="label">🚗 Tereni</span>
-    <span id="navFieldsCount" class="nav-badge">0</span>
-  </a>
-  <a href="stats.html" data-nav="stats">
-    <span class="label">📊 Statistika</span>
-    <span id="navAlertsCount" class="nav-badge">0</span>
-  </a>
-</nav>
+<main class="main">
 
-      <div class="sidebar-actions">
-        <button id="logoutBtn" class="secondary" style="width:100%">Logout</button>
-      </div>
-    </aside>
+<div id="loginView" class="card">
+  <h3>Login</h3>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <button id="loginBtn">Login</button>
+</div>
 
-    <main class="main">
-      <div class="topbar">
-        <div class="topbar-row">
-          <div>
-            <h1 class="page-title">Pozivi</h1>
-            <div class="page-subtitle">Dodavanje poziva, status poziva, zakazivanje terena i pretraga.</div>
-          </div>
+<div id="appView" class="hidden">
 
-          <div class="row">
-            <label class="small">Mesec prikaza</label>
-            <input type="month" id="monthPick" />
-            <button id="monthToday" class="secondary">Danas</button>
-          </div>
-        </div>
-      </div>
+<div class="card">
+  <h3>Dodaj poziv</h3>
 
-      <div class="container">
-        <div class="grid grid-4">
-          <div class="kpi">
-            <div class="kpi-label">Pozivi u mesecu</div>
-            <div class="kpi-value" id="kpiCalls">0</div>
-            <div class="kpi-sub">Ukupan broj poziva za prikazani mesec</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-label">Zakazani tereni</div>
-            <div class="kpi-value" id="kpiScheduled">0</div>
-            <div class="kpi-sub">Tereni vezani za pozive</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-label">Realizovani tereni</div>
-            <div class="kpi-value" id="kpiRealized">0</div>
-            <div class="kpi-sub">Uspešno realizovani tereni</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-label">Konverzija</div>
-            <div class="kpi-value" id="kpiConv">0.0%</div>
-            <div class="kpi-sub">Realizovani tereni / pozivi</div>
-          </div>
-        </div>
+  <input id="ime" placeholder="Ime">
+  <input id="sifra" placeholder="Šifra">
+  <input id="adresa" placeholder="Adresa">
+  <input id="telefon" placeholder="Telefon">
+  <input type="date" id="datumPoziva">
 
-        <div id="alertsWrap" class="alerts"></div>
-        
-        <div class="card" style="margin-top:18px">
-          <h3>Dodaj poziv</h3>
-          <div class="row">
-            <input id="ime" placeholder="Ime i prezime" />
-            <input id="sifra" placeholder="Šifra" />
-            <input id="adresa" placeholder="Adresa" />
-            <input id="telefon" placeholder="Telefon" />
-            <input type="date" id="datumPoziva" />
-            <select id="ponudaAgent">
-              <option value="">Generisao ponudu</option>
-              <option>Marija</option>
-              <option>Slavko</option>
-              <option>Jovan</option>
-            </select>
-            <input id="ishod" placeholder="Ishod poziva" />
-            <button id="addCall">Dodaj</button>
-          </div>
-          <div class="small" style="margin-top:10px">Kod poziva su sva polja obavezna.</div>
-        </div>
+  <select id="ponudaAgent">
+    <option value="">Agent</option>
+    <option>Marija</option>
+    <option>Slavko</option>
+    <option>Jovan</option>
+  </select>
 
-        <div class="card" style="margin-top:18px">
-          <div class="toolbar">
-            <div class="toolbar-left">
-              <h3 style="margin:0">Lista poziva</h3>
-            </div>
-            <div class="toolbar-right">
-              <input id="search" placeholder="Pretraga (ime, telefon, šifra...)" />
-              <select id="sortBy">
-                <option value="datumPoziva_desc">Datum (novo→staro)</option>
-                <option value="datumPoziva_asc">Datum (staro→novo)</option>
-                <option value="ime_asc">Ime (A→Z)</option>
-                <option value="ime_desc">Ime (Z→A)</option>
-                <option value="telefon_asc">Telefon (A→Z)</option>
-                <option value="telefon_desc">Telefon (Z→A)</option>
-                <option value="statusPoziva_desc">Status (čekirano prvo)</option>
-                <option value="statusPoziva_asc">Status (nečekirano prvo)</option>
-              </select>
-            </div>
-          </div>
+  <input id="ishod" placeholder="Ishod">
+  <button id="addCall">Dodaj</button>
+</div>
 
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Ime</th>
-                  <th>Šifra</th>
-                  <th>Telefon</th>
-                  <th>Adresa</th>
-                  <th>Agent</th>
-                  <th>Ishod</th>
-                  <th>Status poziva</th>
-                  <th>Status terena</th>
-                  <th>Akcija</th>
-                </tr>
-              </thead>
-              <tbody id="callsTable"></tbody>
-            </table>
-          </div>
+<div class="card">
+  <input id="search" placeholder="Pretraga">
 
-          <div class="legend">
-            <span class="badge no">Crveno = čekiran poziv</span>
-            <span class="badge ok">Zeleno = zakazan ili realizovan teren</span>
-            <span class="badge warn">Žuto = više nije zakazano</span>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Ime</th>
+        <th>Telefon</th>
+        <th>Agent</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="callsTable"></tbody>
+  </table>
+</div>
 
-  <div class="modal" id="modal">
-    <div class="modal-box">
-      <h4>Zakazi teren</h4>
-      <div class="small">Datum i vreme se automatski postavljaju na danas i 10:00.</div>
+</div>
 
-      <div class="modal-grid">
-        <div>
-          <div class="small" style="margin-bottom:6px">Datum</div>
-          <input type="date" id="datumTeren" style="width:100%" />
-        </div>
-        <div>
-          <div class="small" style="margin-bottom:6px">Vreme</div>
-          <input type="time" id="vremeTeren" style="width:100%" />
-        </div>
-      </div>
-
-      <div class="modal-actions">
-        <button id="cancelField" class="ghost">Otkaži</button>
-        <button id="confirmField">Potvrdi</button>
-      </div>
-    </div>
-  </div>
+</main>
+</div>
 
 </body>
 </html>
