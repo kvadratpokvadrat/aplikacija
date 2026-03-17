@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <title>CRM Dashboard</title>
-<script type="module" src="app.js?v=4"></script>
+<script type="module" src="app.js?v=5"></script>
 
 <style>
 body{margin:0;font-family:Segoe UI;background:#f1f4f9}
@@ -20,6 +20,7 @@ table{width:100%;border-collapse:collapse;margin-top:10px}
 th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle}
 tr:hover{background:#f9fafb}
 .green{background:#dcfce7}
+.red{background:#fee2e2}
 .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #e5e7eb;background:#f8fafc}
 .badge.ok{background:#dcfce7;border-color:#86efac}
 .badge.no{background:#fee2e2;border-color:#fca5a5}
@@ -49,7 +50,7 @@ hr{border:none;border-top:1px solid #eee;margin:10px 0}
       <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
       <button id="loginBtn">Login</button>
     </div>
-    <div class="small">Admin: samo admin može brisati / čekirati status poziva i radni nalog.</div>
+    <div class="small">Admin: samo admin može brisati / čekirati status poziva / radni nalog / realizovan teren.</div>
   </div>
 
   <div id="app" style="display:none">
@@ -90,7 +91,7 @@ hr{border:none;border-top:1px solid #eee;margin:10px 0}
       <div id="chartWrap" style="display:none;margin-top:12px">
         <canvas id="chart" width="900" height="260" style="width:100%;max-width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px"></canvas>
         <div class="small" style="margin-top:8px">
-          Broji terene iz kolekcije <b>fieldVisits</b>.
+          Broji samo <b>realizovane</b> terene iz kolekcije <b>fieldVisits</b>.
         </div>
       </div>
     </div>
@@ -140,8 +141,8 @@ hr{border:none;border-top:1px solid #eee;margin:10px 0}
       </table>
 
       <div class="small">
-        <span class="badge ok">Zakazan teren</span> red je zelen.
-        <span class="badge">Status poziva</span> je checkbox (admin).
+        <span class="badge ok">Zakazan / Realizovan</span> red može biti zelen.
+        <span class="badge no">Čekirano</span> red je crven.
       </div>
     </div>
 
@@ -161,6 +162,7 @@ hr{border:none;border-top:1px solid #eee;margin:10px 0}
             <th>Vreme</th>
             <th>Ishod</th>
             <th>Radni nalog</th>
+            <th>Realizovan</th>
             <th>Akcija</th>
           </tr>
         </thead>
