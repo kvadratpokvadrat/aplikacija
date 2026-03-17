@@ -1,169 +1,69 @@
 <!DOCTYPE html>
-<html lang="sr">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CRM Evidencija - Tereni</title>
-  <link rel="stylesheet" href="style.css" />
-  <script type="module" src="app.js?v=pro2"></script>
+<meta charset="UTF-8" />
+<title>Tereni</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js?v=final"></script>
 </head>
+
 <body data-page="fields">
 
-  <div id="bootScreen" class="login-wrap">
-    <div class="login-card" style="max-width:380px;text-align:center">
-      <h2>CRM Evidencija</h2>
-      <p>Učitavanje...</p>
-    </div>
-  </div>
+<header class="topbar">
+  <div class="logo">CRM</div>
 
-  <div id="loginView" class="login-wrap hidden">
-    <div class="login-card">
-      <h2>CRM Evidencija</h2>
-      <p>Prijavi se da pristupiš pozivima, terenima i statistici.</p>
-      <div class="stack">
-        <input id="email" placeholder="Email" autocomplete="username" />
-        <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
-        <button id="loginBtn">Login</button>
-        <div class="small">Admin može da briše, čekira status poziva, radni nalog i realizovan teren.</div>
+  <div class="top-actions">
+
+    <div class="notif-wrap">
+      <button id="notifBtn" class="notif-btn">
+        🔔
+        <span id="notifBadge" class="notif-badge hidden">0</span>
+      </button>
+
+      <div id="notifDropdown" class="notif-dropdown hidden">
+        <div class="notif-header"><b>Obaveštenja</b></div>
+        <div id="notifList" class="notif-list"></div>
       </div>
     </div>
+
+    <span id="whoami"></span>
+    <button id="logoutBtn">Logout</button>
+
   </div>
+</header>
 
-  <div id="appView" class="shell hidden">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">CRM</div>
-        <div class="brand-text">
-          <b>Evidencija</b>
-          <span>Pozivi · Tereni · Statistika</span>
-        </div>
-      </div>
+<div class="layout">
 
-      <div class="userbox">
-        <div id="whoami" class="small">—</div>
-      </div>
+<aside class="sidebar">
+  <nav>
+    <a href="calls.html">📞 Pozivi</a>
+    <a href="fields.html" class="active">🚗 Tereni</a>
+    <a href="stats.html">📊 Statistika</a>
+  </nav>
+</aside>
 
-      <nav class="nav">
-  <a href="calls.html" data-nav="calls">
-    <span class="label">📞 Pozivi</span>
-    <span id="navCallsCount" class="nav-badge">0</span>
-  </a>
-  <a href="fields.html" data-nav="fields">
-    <span class="label">🚗 Tereni</span>
-    <span id="navFieldsCount" class="nav-badge">0</span>
-  </a>
-  <a href="stats.html" data-nav="stats">
-    <span class="label">📊 Statistika</span>
-    <span id="navAlertsCount" class="nav-badge">0</span>
-  </a>
-</nav>
+<main class="main">
 
-      <div class="sidebar-actions">
-        <button id="logoutBtn" class="secondary" style="width:100%">Logout</button>
-      </div>
-    </aside>
+<div id="appView">
 
-    <main class="main">
-      <div class="topbar">
-        <div class="topbar-row">
-          <div>
-            <h1 class="page-title">Tereni</h1>
-            <div class="page-subtitle">Pregled, ručni unos, realizacija i radni nalog.</div>
-          </div>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Ime</th>
+        <th>Telefon</th>
+        <th>Datum</th>
+        <th>Realizovan</th>
+      </tr>
+    </thead>
+    <tbody id="fieldTable"></tbody>
+  </table>
+</div>
 
-          <div class="row">
-            <label class="small">Mesec prikaza</label>
-            <input type="month" id="monthPick" />
-            <button id="monthToday" class="secondary">Danas</button>
-          </div>
-        </div>
-      </div>
+</div>
 
-      <div class="container">
-        <div class="grid grid-4">
-          <div class="kpi">
-            <div class="kpi-label">Tereni u mesecu</div>
-            <div class="kpi-value" id="kpiFields">0</div>
-            <div class="kpi-sub">Ukupan broj terena u prikazu</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-label">Vezani za poziv</div>
-            <div class="kpi-value" id="kpiLinkedFields">0</div>
-            <div class="kpi-sub">Tereni nastali iz poziva</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-label">Realizovani</div>
-            <div class="kpi-value" id="kpiRealized">0</div>
-            <div class="kpi-sub">Završeni tereni</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-label">Radni nalog</div>
-            <div class="kpi-value" id="kpiRN">0</div>
-            <div class="kpi-sub">Tereni sa radnim nalogom</div>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top:18px">
-          <div class="toolbar">
-            <div class="toolbar-left">
-              <h3 style="margin:0">Lista terena</h3>
-            </div>
-            <div class="toolbar-right">
-              <input id="fieldSearch" placeholder="Pretraga (ime, telefon, adresa...)" />
-              <button id="manualField" class="secondary">Dodaj ručno teren</button>
-            </div>
-          </div>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Ime</th>
-                  <th>Adresa</th>
-                  <th>Telefon</th>
-                  <th>Datum</th>
-                  <th>Vreme</th>
-                  <th>Ishod</th>
-                  <th>Radni nalog</th>
-                  <th>Realizovan</th>
-                  <th>Veza</th>
-                  <th>Akcija</th>
-                </tr>
-              </thead>
-              <tbody id="fieldTable"></tbody>
-            </table>
-          </div>
-
-          <div class="legend">
-            <span class="badge ok">Zeleno = realizovan teren</span>
-            <span class="badge">Ishod možeš menjati direktno u tabeli</span>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <div class="modal" id="manualModal">
-    <div class="modal-box">
-      <h4>Ručno dodaj teren</h4>
-      <div class="small">Obavezni su ime, adresa, telefon, datum i vreme. Ishod može ostati prazan.</div>
-
-      <div class="modal-grid">
-        <input id="mIme" placeholder="Ime i prezime" />
-        <input id="mAdresa" placeholder="Adresa" />
-        <input id="mTelefon" placeholder="Telefon" />
-        <input type="date" id="mDatumTeren" />
-        <input type="time" id="mVremeTeren" />
-        <input id="mIshodTeren" placeholder="Ishod terena" />
-        <label class="small"><input type="checkbox" id="mRadniNalog" /> Radni nalog</label>
-      </div>
-
-      <div class="modal-actions">
-        <button id="cancelManualField" class="ghost">Otkaži</button>
-        <button id="saveManualField">Sačuvaj</button>
-      </div>
-    </div>
-  </div>
+</main>
+</div>
 
 </body>
 </html>
