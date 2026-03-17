@@ -191,7 +191,7 @@ let state = {
 
 document.addEventListener("DOMContentLoaded", () => {
   markActiveNav();
-
+  const bootScreen = qs("bootScreen");
   const loginView = qs("loginView");
   const appView = qs("appView");
   const email = qs("email");
@@ -265,20 +265,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   onAuthStateChanged(auth, (user) => {
-    state.user = user;
-    state.isAdmin = !!user && isAdminEmail(user.email);
+  state.user = user;
+  state.isAdmin = !!user && isAdminEmail(user.email);
 
-    if (user) {
-      if (loginView) loginView.classList.add("hidden");
-      if (appView) appView.classList.remove("hidden");
-      if (whoami) whoami.textContent = `${user.email}${state.isAdmin ? " (ADMIN)" : ""}`;
-      bootSubscriptions(unsubCalls, unsubFields, chartVisible, chartCanvas, callsTable, fieldTable, statsEl);
-    } else {
-      if (loginView) loginView.classList.remove("hidden");
-      if (appView) appView.classList.add("hidden");
-      if (whoami) whoami.textContent = "";
-    }
-  });
+  if (bootScreen) bootScreen.classList.add("hidden");
+
+  if (user) {
+    if (loginView) loginView.classList.add("hidden");
+    if (appView) appView.classList.remove("hidden");
+    if (whoami) whoami.textContent = `${user.email}${state.isAdmin ? " (ADMIN)" : ""}`;
+    bootSubscriptions(unsubCalls, unsubFields, chartVisible, chartCanvas, callsTable, fieldTable, statsEl);
+  } else {
+    if (loginView) loginView.classList.remove("hidden");
+    if (appView) appView.classList.add("hidden");
+    if (whoami) whoami.textContent = "";
+  }
+});
 
   if (monthPick) {
     monthPick.addEventListener("change", () => {
