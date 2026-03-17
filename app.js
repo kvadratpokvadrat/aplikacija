@@ -32,18 +32,15 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const ADMIN_EMAILS = [
-  "stefanbarac@gmail.com",
-];
-
+const ADMIN_EMAILS = ["stefanbarac@gmail.com"];
 const AGENTS = ["Marija", "Slavko", "Jovan"];
-
-function isAdminEmail(email) {
-  return ADMIN_EMAILS.map(e => e.toLowerCase().trim()).includes(String(email || "").toLowerCase().trim());
-}
 
 function qs(id) {
   return document.getElementById(id);
+}
+
+function isAdminEmail(email) {
+  return ADMIN_EMAILS.map(e => e.toLowerCase().trim()).includes(String(email || "").toLowerCase().trim());
 }
 
 function toYMD(d) {
@@ -80,6 +77,17 @@ function escapeHtml(str) {
 
 function escapeAttr(str) {
   return escapeHtml(str).replaceAll("\n", " ");
+}
+
+function setText(id, value) {
+  const el = qs(id);
+  if (el) el.textContent = String(value);
+}
+
+function markActiveNav(page) {
+  document.querySelectorAll("[data-nav]").forEach((a) => {
+    a.classList.toggle("active", a.getAttribute("data-nav") === page);
+  });
 }
 
 function getCallRowClass(c) {
@@ -190,10 +198,10 @@ let state = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  markActiveNav();
   const bootScreen = qs("bootScreen");
   const loginView = qs("loginView");
   const appView = qs("appView");
+
   const email = qs("email");
   const password = qs("password");
   const loginBtn = qs("loginBtn");
@@ -245,6 +253,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let unsubFields = null;
   let chartVisible = false;
 
+  markActiveNav(state.page);
+
   if (monthPick) monthPick.value = state.selectedMonth;
   if (datumPoziva) datumPoziva.value = toYMD(new Date());
 
@@ -265,27 +275,27 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   onAuthStateChanged(auth, (user) => {
-  state.user = user;
-  state.isAdmin = !!user && isAdminEmail(user.email);
+    state.user = user;
+    state.isAdmin = !!user && isAdminEmail(user.email);
 
-  if (bootScreen) bootScreen.classList.add("hidden");
+    if (bootScreen) bootScreen.classList.add("hidden");
 
-  if (user) {
-    if (loginView) loginView.classList.add("hidden");
-    if (appView) appView.classList.remove("hidden");
-    if (whoami) whoami.textContent = `${user.email}${state.isAdmin ? " (ADMIN)" : ""}`;
-    bootSubscriptions(unsubCalls, unsubFields, chartVisible, chartCanvas, callsTable, fieldTable, statsEl);
-  } else {
-    if (loginView) loginView.classList.remove("hidden");
-    if (appView) appView.classList.add("hidden");
-    if (whoami) whoami.textContent = "";
-  }
-});
+    if (user) {
+      if (loginView) loginView.classList.add("hidden");
+      if (appView) appView.classList.remove("hidden");
+      if (whoami) whoami.textContent = `${user.email}${state.isAdmin ? " (ADMIN)" : ""}`;
+      bootSubscriptions();
+    } else {
+      if (loginView) loginView.classList.remove("hidden");
+      if (appView) appView.classList.add("hidden");
+      if (whoami) whoami.textContent = "";
+    }
+  });
 
   if (monthPick) {
     monthPick.addEventListener("change", () => {
       state.selectedMonth = monthPick.value || currentMonthKey();
-      bootSubscriptions(unsubCalls, unsubFields, chartVisible, chartCanvas, callsTable, fieldTable, statsEl);
+      bootSubscriptions();
     });
   }
 
@@ -293,21 +303,22 @@ document.addEventListener("DOMContentLoaded", () => {
     monthToday.addEventListener("click", () => {
       state.selectedMonth = currentMonthKey();
       if (monthPick) monthPick.value = state.selectedMonth;
-      bootSubscriptions(unsubCalls, unsubFields, chartVisible, chartCanvas, callsTable, fieldTable, statsEl);
+      bootSubscriptions();
     });
   }
 
-  if (search) search.addEventListener("input", () => renderCalls(callsTable, sortBy, search));
-  if (fieldSearch) fieldSearch.addEventListener("input", () => renderFields(fieldTable, fieldSearch));
-  if (sortBy) sortBy.addEventListener("change", () => renderCalls(callsTable, sortBy, search));
+  if (search) search.addEventListener("input", renderCalls);
+  if (fieldSearch) fieldSearch.addEventListener("input", renderFields);
+  if (sortBy) sortBy.addEventListener("change", renderCalls);
 
   if (toggleChart) {
     toggleChart.addEventListener("click", () => {
       chartVisible = !chartVisible;
       if (chartWrap) chartWrap.classList.toggle("hidden", !chartVisible);
       toggleChart.textContent = chartVisible ? "Sakrij grafikon" : "Prikaži grafikon";
+
       if (chartVisible) {
-        renderChartAllMonths(chartCanvas).catch(() => {});
+        renderChartAllMonths().catch(() => {});
       }
     });
   }
@@ -362,6 +373,7 @@ document.addEventListener("DOMContentLoaded", () => {
     state.selectedCallId = callId;
     if (!modal) return;
     modal.style.display = "flex";
+
     const now = new Date();
     if (datumTeren) datumTeren.value = toYMD(now);
     if (vremeTeren) vremeTeren.value = "10:00";
@@ -431,6 +443,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function openManualModal() {
     if (!manualModal) return;
     manualModal.style.display = "flex";
+
     const now = new Date();
     if (mDatumTeren) mDatumTeren.value = toYMD(now);
     if (mVremeTeren) mVremeTeren.value = "10:00";
@@ -488,9 +501,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target === manualModal) closeManualModal();
   });
 
-  async function bootSubscriptions(prevUnsubCalls, prevUnsubFields, showChart, canvas, callsTableEl, fieldTableEl, statsContainerEl) {
-    if (typeof prevUnsubCalls === "function") prevUnsubCalls();
-    if (typeof prevUnsubFields === "function") prevUnsubFields();
+  function bootSubscriptions() {
+    if (typeof unsubCalls === "function") unsubCalls();
+    if (typeof unsubFields === "function") unsubFields();
 
     const { start, end } = monthRangeFromMonthKey(state.selectedMonth);
 
@@ -502,8 +515,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     unsubCalls = onSnapshot(callsQ, (snap) => {
       state.calls = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      renderCalls(callsTableEl, sortBy, search);
-      renderStats(statsContainerEl);
+      renderCalls();
+      renderStats();
       renderMiniStats();
       updateNavCounts();
     });
@@ -516,19 +529,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     unsubFields = onSnapshot(fieldsQ, (snap) => {
       state.fields = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      renderFields(fieldTableEl, fieldSearch);
-      renderStats(statsContainerEl);
+      renderFields();
+      renderStats();
       renderMiniStats();
       updateNavCounts();
     });
 
-    if (showChart) {
-      renderChartAllMonths(canvas).catch(() => {});
+    if (chartVisible) {
+      renderChartAllMonths().catch(() => {});
     }
   }
 
-  function sortCalls(arr, sortSelect) {
-    const mode = sortSelect?.value || "datumPoziva_desc";
+  function sortCalls(arr) {
+    const mode = sortBy?.value || "datumPoziva_desc";
     const copy = [...arr];
     const get = (o, k) => String(o?.[k] ?? "").toLowerCase();
 
@@ -558,10 +571,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return copy;
   }
 
-  function renderCalls(callsTableEl, sortSelect, searchInput) {
-    if (!callsTableEl) return;
+  function renderCalls() {
+    if (!callsTable) return;
 
-    const q = (searchInput?.value || "").toLowerCase().trim();
+    const q = (search?.value || "").toLowerCase().trim();
     let filtered = state.calls;
 
     if (q) {
@@ -580,8 +593,13 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    const sorted = sortCalls(filtered, sortSelect);
-    callsTableEl.innerHTML = "";
+    const sorted = sortCalls(filtered);
+    callsTable.innerHTML = "";
+
+    if (!sorted.length) {
+      callsTable.innerHTML = `<tr><td colspan="9"><div class="empty-state">Nema poziva za prikaz.</div></td></tr>`;
+      return;
+    }
 
     sorted.forEach((c) => {
       const statusBadge = c.statusPoziva
@@ -600,16 +618,14 @@ document.addEventListener("DOMContentLoaded", () => {
         ? ``
         : `<button onclick="window._schedule('${c.id}')">Teren</button>`;
 
-      callsTableEl.innerHTML += `
+      callsTable.innerHTML += `
         <tr class="${getCallRowClass(c)}">
           <td>${escapeHtml(c.ime || "")}</td>
           <td>${escapeHtml(c.sifra || "")}</td>
           <td>${escapeHtml(c.telefon || "")}</td>
           <td>${escapeHtml(c.adresa || "")}</td>
           <td>${escapeHtml(c.ponudaAgent || "")}</td>
-          <td>
-            <input value="${escapeAttr(c.ishod || "")}" onchange="window._updateCallIshod('${c.id}', this.value)">
-          </td>
+          <td><input value="${escapeAttr(c.ishod || "")}" onchange="window._updateCallIshod('${c.id}', this.value)"></td>
           <td style="text-align:center">
             ${statusInput}
             <div style="margin-top:6px">${statusBadge}</div>
@@ -626,10 +642,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function renderFields(fieldTableEl, fieldSearchInput) {
-    if (!fieldTableEl) return;
+  function renderFields() {
+    if (!fieldTable) return;
 
-    const q = (fieldSearchInput?.value || "").toLowerCase().trim();
+    const q = (fieldSearch?.value || "").toLowerCase().trim();
     let arr = [...state.fields];
 
     if (q) {
@@ -654,7 +670,12 @@ document.addEventListener("DOMContentLoaded", () => {
       return db.localeCompare(da);
     });
 
-    fieldTableEl.innerHTML = "";
+    fieldTable.innerHTML = "";
+
+    if (!arr.length) {
+      fieldTable.innerHTML = `<tr><td colspan="10"><div class="empty-state">Nema terena za prikaz.</div></td></tr>`;
+      return;
+    }
 
     arr.forEach((f) => {
       const rn = !!f.radniNalog;
@@ -672,16 +693,14 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `<button class="danger" onclick="window._del('fieldVisits','${f.id}')">X</button>`
         : "";
 
-      fieldTableEl.innerHTML += `
+      fieldTable.innerHTML += `
         <tr class="${getFieldRowClass(f)}">
           <td>${escapeHtml(f.ime || "")}</td>
           <td>${escapeHtml(f.adresa || "")}</td>
           <td>${escapeHtml(f.telefon || "")}</td>
           <td>${escapeHtml(f.datumTeren || "")}</td>
           <td>${escapeHtml(f.vremeTeren || "")}</td>
-          <td>
-            <input value="${escapeAttr(f.ishodTeren || "")}" onchange="window._updateFieldIshod('${f.id}', this.value)">
-          </td>
+          <td><input value="${escapeAttr(f.ishodTeren || "")}" onchange="window._updateFieldIshod('${f.id}', this.value)"></td>
           <td style="text-align:center">${rnCell}</td>
           <td style="text-align:center">${realizovanCell}</td>
           <td>${f.callId ? `<span class="badge ok">Vezan poziv</span>` : `<span class="badge">Ručno</span>`}</td>
@@ -709,8 +728,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setText("kpiRN", rnCount);
   }
 
-  function renderStats(statsContainerEl) {
-    if (!statsContainerEl) return;
+  function renderStats() {
+    if (!statsEl) return;
 
     const calls = state.calls;
     const fields = state.fields;
@@ -740,7 +759,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setText("kpiRealized", realizedCount);
     setText("kpiConv", `${conv}%`);
 
-    statsContainerEl.innerHTML = AGENTS.map((a) => {
+    statsEl.innerHTML = AGENTS.map((a) => {
       const ac = byAgent[a].calls;
       const as = byAgent[a].scheduled;
       const ar = byAgent[a].realized;
@@ -763,10 +782,14 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
     }).join("");
+
+    if (!AGENTS.length) {
+      statsEl.innerHTML = `<div class="empty-state">Nema statistike za prikaz.</div>`;
+    }
   }
 
-  async function renderChartAllMonths(canvas) {
-    if (!canvas) return;
+  async function renderChartAllMonths() {
+    if (!chartCanvas) return;
 
     const snap = await getDocs(collection(db, "fieldVisits"));
     const counts = new Map();
@@ -774,8 +797,10 @@ document.addEventListener("DOMContentLoaded", () => {
     snap.forEach((d) => {
       const v = d.data();
       if (!v.realizovan) return;
+
       const k = monthKeyFromYMD(v.datumTeren);
       if (!k) return;
+
       counts.set(k, (counts.get(k) || 0) + 1);
     });
 
@@ -795,23 +820,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const values = last.map((k) => counts.get(k) || 0);
-    drawBarChart(canvas, labels, values);
+    drawBarChart(chartCanvas, labels, values);
   }
 
   function updateNavCounts() {
     setText("navCallsCount", state.calls.length);
     setText("navFieldsCount", state.fields.length);
-  }
-
-  function setText(id, value) {
-    const el = qs(id);
-    if (el) el.textContent = String(value);
-  }
-
-  function markActiveNav() {
-    document.querySelectorAll("[data-nav]").forEach((a) => {
-      a.classList.toggle("active", a.getAttribute("data-nav") === state.page);
-    });
   }
 
   window._schedule = (callId) => {
@@ -821,42 +835,52 @@ document.addEventListener("DOMContentLoaded", () => {
   window._updateCallIshod = async (id, val) => {
     const callRef = doc(db, "calls", id);
     const callSnap = await getDoc(callRef);
+
     if (!callSnap.exists()) {
       alert("Poziv više ne postoji.");
       return;
     }
+
     await updateDoc(callRef, { ishod: val });
   };
 
   window._toggleStatusPoziva = async (id, checked) => {
     if (!state.isAdmin) return;
+
     const callRef = doc(db, "calls", id);
     const callSnap = await getDoc(callRef);
+
     if (!callSnap.exists()) {
       alert("Poziv više ne postoji.");
       return;
     }
+
     await updateDoc(callRef, { statusPoziva: !!checked });
   };
 
   window._updateFieldIshod = async (id, val) => {
     const fieldRef = doc(db, "fieldVisits", id);
     const fieldSnap = await getDoc(fieldRef);
+
     if (!fieldSnap.exists()) {
       alert("Teren više ne postoji.");
       return;
     }
+
     await updateDoc(fieldRef, { ishodTeren: val });
   };
 
   window._toggleRadniNalog = async (id, checked) => {
     if (!state.isAdmin) return;
+
     const fieldRef = doc(db, "fieldVisits", id);
     const fieldSnap = await getDoc(fieldRef);
+
     if (!fieldSnap.exists()) {
       alert("Teren više ne postoji.");
       return;
     }
+
     await updateDoc(fieldRef, { radniNalog: !!checked });
   };
 
@@ -887,8 +911,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    if (!chartWrap?.classList.contains("hidden")) {
-      renderChartAllMonths(chartCanvas).catch(() => {});
+    if (chartVisible) {
+      renderChartAllMonths().catch(() => {});
     }
   };
 
@@ -927,8 +951,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     await deleteDoc(ref);
 
-    if (!chartWrap?.classList.contains("hidden")) {
-      renderChartAllMonths(chartCanvas).catch(() => {});
+    if (chartVisible) {
+      renderChartAllMonths().catch(() => {});
     }
   };
 });
