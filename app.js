@@ -42,6 +42,10 @@ function isAdminEmail(email) {
   return ADMIN_EMAILS.map(e => e.toLowerCase().trim()).includes(String(email || "").toLowerCase().trim());
 }
 
+function qs(id) {
+  return document.getElementById(id);
+}
+
 function toYMD(d) {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
@@ -78,6 +82,29 @@ function escapeAttr(str) {
   return escapeHtml(str).replaceAll("\n", " ");
 }
 
+function getCallRowClass(c) {
+  if (c.statusPoziva) return "red";
+  if (c.statusTerena === "realizovan" || c.statusTerena === "zakazan" || c.teren) return "green";
+  return "";
+}
+
+function getFieldRowClass(f) {
+  return f.realizovan ? "green" : "";
+}
+
+function getCallStatusBadge(call) {
+  if (call.statusTerena === "realizovan") {
+    return `<span class="badge ok">Realizovan</span>`;
+  }
+  if (call.statusTerena === "zakazan" || call.teren === true) {
+    return `<span class="badge ok">Zakazan</span>`;
+  }
+  if (call.statusTerena === "otkazan" || call.statusTerena === "nije_zakazano") {
+    return `<span class="badge warn">Više nije zakazano</span>`;
+  }
+  return `<span class="badge">-</span>`;
+}
+
 function drawBarChart(canvas, labels, values) {
   if (!canvas) return;
 
@@ -87,37 +114,34 @@ function drawBarChart(canvas, labels, values) {
 
   ctx.clearRect(0, 0, W, H);
 
-  const padL = 60;
-  const padR = 20;
-  const padT = 20;
-  const padB = 55;
+  const padL = 64;
+  const padR = 24;
+  const padT = 24;
+  const padB = 56;
 
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
-
-  const maxVal = Math.max(1, ...values);
+  const maxVal = Math.max(1, ...values, 0);
 
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, W, H);
 
+  const steps = 5;
   ctx.strokeStyle = "#e5e7eb";
   ctx.lineWidth = 1;
-
-  const steps = 5;
   ctx.font = "12px Segoe UI";
   ctx.fillStyle = "#64748b";
   ctx.textAlign = "right";
 
   for (let i = 0; i <= steps; i++) {
     const y = padT + (chartH / steps) * i;
-
     ctx.beginPath();
     ctx.moveTo(padL, y);
     ctx.lineTo(padL + chartW, y);
     ctx.stroke();
 
     const val = Math.round(maxVal - (maxVal / steps) * i);
-    ctx.fillText(String(val), padL - 8, y + 4);
+    ctx.fillText(String(val), padL - 10, y + 4);
   }
 
   ctx.strokeStyle = "#94a3b8";
@@ -129,12 +153,12 @@ function drawBarChart(canvas, labels, values) {
   ctx.stroke();
 
   const count = Math.max(values.length, 1);
-  const gap = 14;
-  const barW = Math.max(18, Math.floor((chartW - gap * (count - 1)) / count));
+  const gap = 16;
+  const barW = Math.max(20, Math.floor((chartW - gap * (count - 1)) / count));
 
   values.forEach((v, i) => {
     const x = padL + i * (barW + gap);
-    const h = Math.round((v / maxVal) * (chartH - 10));
+    const h = Math.round((v / maxVal) * (chartH - 12));
     const y = padT + chartH - h;
 
     const gradient = ctx.createLinearGradient(0, y, 0, padT + chartH);
@@ -151,7 +175,7 @@ function drawBarChart(canvas, labels, values) {
 
     ctx.fillStyle = "#475569";
     ctx.font = "12px Segoe UI";
-    ctx.fillText(labels[i] || "", x + barW / 2, padT + chartH + 20);
+    ctx.fillText(labels[i] || "", x + barW / 2, padT + chartH + 22);
   });
 }
 
@@ -162,285 +186,309 @@ let state = {
   selectedCallId: null,
   calls: [],
   fields: [],
+  page: document.body.dataset.page || "calls",
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  const login = document.getElementById("login");
-  const appDiv = document.getElementById("app");
+  markActiveNav();
 
-  const email = document.getElementById("email");
-  const password = document.getElementById("password");
-  const loginBtn = document.getElementById("loginBtn");
+  const loginView = qs("loginView");
+  const appView = qs("appView");
+  const email = qs("email");
+  const password = qs("password");
+  const loginBtn = qs("loginBtn");
+  const logoutBtn = qs("logoutBtn");
+  const whoami = qs("whoami");
 
-  const whoami = document.getElementById("whoami");
-  const logoutBtn = document.getElementById("logoutBtn");
+  const monthPick = qs("monthPick");
+  const monthToday = qs("monthToday");
 
-  const monthPick = document.getElementById("monthPick");
-  const monthToday = document.getElementById("monthToday");
-  const sortBy = document.getElementById("sortBy");
+  const ime = qs("ime");
+  const sifra = qs("sifra");
+  const adresa = qs("adresa");
+  const telefon = qs("telefon");
+  const datumPoziva = qs("datumPoziva");
+  const ponudaAgent = qs("ponudaAgent");
+  const ishod = qs("ishod");
+  const addCall = qs("addCall");
 
-  const statsEl = document.getElementById("stats");
-  const chartCanvas = document.getElementById("chart");
-  const toggleChart = document.getElementById("toggleChart");
-  const chartWrap = document.getElementById("chartWrap");
+  const search = qs("search");
+  const fieldSearch = qs("fieldSearch");
+  const sortBy = qs("sortBy");
+  const callsTable = qs("callsTable");
+  const fieldTable = qs("fieldTable");
 
-  const ime = document.getElementById("ime");
-  const sifra = document.getElementById("sifra");
-  const adresa = document.getElementById("adresa");
-  const telefon = document.getElementById("telefon");
-  const datumPoziva = document.getElementById("datumPoziva");
-  const ponudaAgent = document.getElementById("ponudaAgent");
-  const ishod = document.getElementById("ishod");
-  const addCall = document.getElementById("addCall");
+  const modal = qs("modal");
+  const datumTeren = qs("datumTeren");
+  const vremeTeren = qs("vremeTeren");
+  const confirmField = qs("confirmField");
+  const cancelField = qs("cancelField");
 
-  const search = document.getElementById("search");
-  const callsTable = document.getElementById("callsTable");
+  const manualModal = qs("manualModal");
+  const manualField = qs("manualField");
+  const mIme = qs("mIme");
+  const mAdresa = qs("mAdresa");
+  const mTelefon = qs("mTelefon");
+  const mDatumTeren = qs("mDatumTeren");
+  const mVremeTeren = qs("mVremeTeren");
+  const mIshodTeren = qs("mIshodTeren");
+  const mRadniNalog = qs("mRadniNalog");
+  const saveManualField = qs("saveManualField");
+  const cancelManualField = qs("cancelManualField");
 
-  const fieldTable = document.getElementById("fieldTable");
-  const manualField = document.getElementById("manualField");
-
-  const modal = document.getElementById("modal");
-  const datumTeren = document.getElementById("datumTeren");
-  const vremeTeren = document.getElementById("vremeTeren");
-  const confirmField = document.getElementById("confirmField");
-  const cancelField = document.getElementById("cancelField");
-
-  const manualModal = document.getElementById("manualModal");
-  const mIme = document.getElementById("mIme");
-  const mAdresa = document.getElementById("mAdresa");
-  const mTelefon = document.getElementById("mTelefon");
-  const mDatumTeren = document.getElementById("mDatumTeren");
-  const mVremeTeren = document.getElementById("mVremeTeren");
-  const mIshodTeren = document.getElementById("mIshodTeren");
-  const mRadniNalog = document.getElementById("mRadniNalog");
-  const saveManualField = document.getElementById("saveManualField");
-  const cancelManualField = document.getElementById("cancelManualField");
+  const statsEl = qs("stats");
+  const toggleChart = qs("toggleChart");
+  const chartWrap = qs("chartWrap");
+  const chartCanvas = qs("chart");
 
   let unsubCalls = null;
   let unsubFields = null;
   let chartVisible = false;
 
-  datumPoziva.value = toYMD(new Date());
-  monthPick.value = state.selectedMonth;
+  if (monthPick) monthPick.value = state.selectedMonth;
+  if (datumPoziva) datumPoziva.value = toYMD(new Date());
 
-  loginBtn.addEventListener("click", async () => {
-    try {
-      await signInWithEmailAndPassword(auth, email.value, password.value);
-    } catch (e) {
-      alert(e?.message || "Login greška");
-    }
-  });
+  if (loginBtn) {
+    loginBtn.addEventListener("click", async () => {
+      try {
+        await signInWithEmailAndPassword(auth, email.value, password.value);
+      } catch (e) {
+        alert(e?.message || "Login greška");
+      }
+    });
+  }
 
-  logoutBtn.addEventListener("click", async () => {
-    await signOut(auth);
-  });
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+    });
+  }
 
   onAuthStateChanged(auth, (user) => {
     state.user = user;
     state.isAdmin = !!user && isAdminEmail(user.email);
 
     if (user) {
-      login.style.display = "none";
-      appDiv.style.display = "block";
-      logoutBtn.style.display = "inline-block";
-      whoami.textContent = `${user.email}${state.isAdmin ? " (ADMIN)" : ""}`;
-      bootSubscriptions();
+      if (loginView) loginView.classList.add("hidden");
+      if (appView) appView.classList.remove("hidden");
+      if (whoami) whoami.textContent = `${user.email}${state.isAdmin ? " (ADMIN)" : ""}`;
+      bootSubscriptions(unsubCalls, unsubFields, chartVisible, chartCanvas, callsTable, fieldTable, statsEl);
     } else {
-      appDiv.style.display = "none";
-      login.style.display = "block";
-      logoutBtn.style.display = "none";
-      whoami.textContent = "";
+      if (loginView) loginView.classList.remove("hidden");
+      if (appView) appView.classList.add("hidden");
+      if (whoami) whoami.textContent = "";
     }
   });
 
-  monthPick.addEventListener("change", () => {
-    state.selectedMonth = monthPick.value || currentMonthKey();
-    bootSubscriptions();
-  });
-
-  monthToday.addEventListener("click", () => {
-    state.selectedMonth = currentMonthKey();
-    monthPick.value = state.selectedMonth;
-    bootSubscriptions();
-  });
-
-  sortBy.addEventListener("change", renderCalls);
-  search.addEventListener("input", renderCalls);
-
-  toggleChart.addEventListener("click", () => {
-    chartVisible = !chartVisible;
-    chartWrap.style.display = chartVisible ? "block" : "none";
-    toggleChart.textContent = chartVisible ? "Sakrij grafikon" : "Prikaži grafikon";
-
-    if (chartVisible) {
-      renderChartAllMonths().catch(() => {});
-    }
-  });
-
-  addCall.addEventListener("click", async () => {
-    const imeVal = (ime.value || "").trim();
-    const sifraVal = (sifra.value || "").trim();
-    const adresaVal = (adresa.value || "").trim();
-    const tel = (telefon.value || "").trim();
-    const datumVal = datumPoziva.value || "";
-    const ponudaVal = ponudaAgent.value || "";
-    const ishodVal = (ishod.value || "").trim();
-
-    if (!imeVal) return alert("Unesi ime i prezime.");
-    if (!sifraVal) return alert("Unesi šifru.");
-    if (!adresaVal) return alert("Unesi adresu.");
-    if (!tel) return alert("Unesi broj telefona.");
-    if (!datumVal) return alert("Unesi datum poziva.");
-    if (!ponudaVal) return alert("Izaberi ko je generisao ponudu.");
-    if (!ishodVal) return alert("Unesi ishod poziva.");
-
-    const qDup = query(collection(db, "calls"), where("telefon", "==", tel));
-    const snapDup = await getDocs(qDup);
-    if (!snapDup.empty) return alert("Telefon već postoji!");
-
-    await addDoc(collection(db, "calls"), {
-      ime: imeVal,
-      sifra: sifraVal,
-      adresa: adresaVal,
-      telefon: tel,
-      datumPoziva: datumVal,
-      ponudaAgent: ponudaVal,
-      ishod: ishodVal,
-      teren: false,
-      statusPoziva: false,
-      statusTerena: "nije_zakazano",
-      createdAt: Date.now(),
+  if (monthPick) {
+    monthPick.addEventListener("change", () => {
+      state.selectedMonth = monthPick.value || currentMonthKey();
+      bootSubscriptions(unsubCalls, unsubFields, chartVisible, chartCanvas, callsTable, fieldTable, statsEl);
     });
+  }
 
-    ime.value = "";
-    sifra.value = "";
-    adresa.value = "";
-    telefon.value = "";
-    ishod.value = "";
-    ponudaAgent.value = "";
-    datumPoziva.value = toYMD(new Date());
-  });
+  if (monthToday) {
+    monthToday.addEventListener("click", () => {
+      state.selectedMonth = currentMonthKey();
+      if (monthPick) monthPick.value = state.selectedMonth;
+      bootSubscriptions(unsubCalls, unsubFields, chartVisible, chartCanvas, callsTable, fieldTable, statsEl);
+    });
+  }
+
+  if (search) search.addEventListener("input", () => renderCalls(callsTable, sortBy, search));
+  if (fieldSearch) fieldSearch.addEventListener("input", () => renderFields(fieldTable, fieldSearch));
+  if (sortBy) sortBy.addEventListener("change", () => renderCalls(callsTable, sortBy, search));
+
+  if (toggleChart) {
+    toggleChart.addEventListener("click", () => {
+      chartVisible = !chartVisible;
+      if (chartWrap) chartWrap.classList.toggle("hidden", !chartVisible);
+      toggleChart.textContent = chartVisible ? "Sakrij grafikon" : "Prikaži grafikon";
+      if (chartVisible) {
+        renderChartAllMonths(chartCanvas).catch(() => {});
+      }
+    });
+  }
+
+  if (addCall) {
+    addCall.addEventListener("click", async () => {
+      const imeVal = (ime?.value || "").trim();
+      const sifraVal = (sifra?.value || "").trim();
+      const adresaVal = (adresa?.value || "").trim();
+      const tel = (telefon?.value || "").trim();
+      const datumVal = datumPoziva?.value || "";
+      const ponudaVal = ponudaAgent?.value || "";
+      const ishodVal = (ishod?.value || "").trim();
+
+      if (!imeVal) return alert("Unesi ime i prezime.");
+      if (!sifraVal) return alert("Unesi šifru.");
+      if (!adresaVal) return alert("Unesi adresu.");
+      if (!tel) return alert("Unesi broj telefona.");
+      if (!datumVal) return alert("Unesi datum poziva.");
+      if (!ponudaVal) return alert("Izaberi ko je generisao ponudu.");
+      if (!ishodVal) return alert("Unesi ishod poziva.");
+
+      const qDup = query(collection(db, "calls"), where("telefon", "==", tel));
+      const snapDup = await getDocs(qDup);
+      if (!snapDup.empty) return alert("Telefon već postoji!");
+
+      await addDoc(collection(db, "calls"), {
+        ime: imeVal,
+        sifra: sifraVal,
+        adresa: adresaVal,
+        telefon: tel,
+        datumPoziva: datumVal,
+        ponudaAgent: ponudaVal,
+        ishod: ishodVal,
+        teren: false,
+        statusPoziva: false,
+        statusTerena: "nije_zakazano",
+        createdAt: Date.now(),
+      });
+
+      if (ime) ime.value = "";
+      if (sifra) sifra.value = "";
+      if (adresa) adresa.value = "";
+      if (telefon) telefon.value = "";
+      if (ishod) ishod.value = "";
+      if (ponudaAgent) ponudaAgent.value = "";
+      if (datumPoziva) datumPoziva.value = toYMD(new Date());
+    });
+  }
 
   function openScheduleModal(callId) {
     state.selectedCallId = callId;
-    modal.style.display = "block";
+    if (!modal) return;
+    modal.style.display = "flex";
     const now = new Date();
-    datumTeren.value = toYMD(now);
-    vremeTeren.value = "10:00";
+    if (datumTeren) datumTeren.value = toYMD(now);
+    if (vremeTeren) vremeTeren.value = "10:00";
   }
 
   function closeScheduleModal() {
+    if (!modal) return;
     modal.style.display = "none";
     state.selectedCallId = null;
   }
 
-  cancelField.addEventListener("click", closeScheduleModal);
+  if (cancelField) cancelField.addEventListener("click", closeScheduleModal);
 
-  confirmField.addEventListener("click", async () => {
-    if (!state.selectedCallId) return;
-    if (!datumTeren.value) return alert("Unesi datum terena.");
-    if (!vremeTeren.value) return alert("Unesi vreme terena.");
+  if (confirmField) {
+    confirmField.addEventListener("click", async () => {
+      if (!state.selectedCallId) return;
+      if (!datumTeren?.value) return alert("Unesi datum terena.");
+      if (!vremeTeren?.value) return alert("Unesi vreme terena.");
 
-    const callRef = doc(db, "calls", state.selectedCallId);
-    const callSnap = await getDoc(callRef);
+      const callRef = doc(db, "calls", state.selectedCallId);
+      const callSnap = await getDoc(callRef);
 
-    if (!callSnap.exists()) {
-      alert("Poziv ne postoji.");
+      if (!callSnap.exists()) {
+        alert("Poziv ne postoji.");
+        closeScheduleModal();
+        return;
+      }
+
+      const c = callSnap.data();
+
+      if (c.teren === true) {
+        alert("Za ovaj poziv je teren već zakazan.");
+        closeScheduleModal();
+        return;
+      }
+
+      if (!(c.ime || "").trim()) return alert("Poziv nema ime i prezime.");
+      if (!(c.sifra || "").trim()) return alert("Poziv nema šifru.");
+      if (!(c.adresa || "").trim()) return alert("Poziv nema adresu.");
+      if (!(c.telefon || "").trim()) return alert("Poziv nema broj telefona.");
+      if (!(c.ishod || "").trim()) return alert("Poziv nema ishod poziva.");
+
+      await addDoc(collection(db, "fieldVisits"), {
+        callId: state.selectedCallId,
+        ime: c.ime || "",
+        sifra: c.sifra || "",
+        telefon: c.telefon || "",
+        adresa: c.adresa || "",
+        ponudaAgent: c.ponudaAgent || "",
+        datumTeren: datumTeren.value,
+        vremeTeren: vremeTeren.value,
+        ishodTeren: "",
+        radniNalog: false,
+        realizovan: false,
+        createdAt: Date.now(),
+      });
+
+      await updateDoc(callRef, {
+        teren: true,
+        statusTerena: "zakazan",
+      });
+
       closeScheduleModal();
-      return;
-    }
-
-    const c = callSnap.data();
-
-    if (c.teren === true) {
-      alert("Za ovaj poziv je teren već zakazan.");
-      closeScheduleModal();
-      return;
-    }
-
-    if (!(c.ime || "").trim()) return alert("Poziv nema ime i prezime.");
-    if (!(c.sifra || "").trim()) return alert("Poziv nema šifru.");
-    if (!(c.adresa || "").trim()) return alert("Poziv nema adresu.");
-    if (!(c.telefon || "").trim()) return alert("Poziv nema broj telefona.");
-    if (!(c.ishod || "").trim()) return alert("Poziv nema ishod poziva.");
-
-    await addDoc(collection(db, "fieldVisits"), {
-      callId: state.selectedCallId,
-      ime: c.ime || "",
-      sifra: c.sifra || "",
-      telefon: c.telefon || "",
-      adresa: c.adresa || "",
-      ponudaAgent: c.ponudaAgent || "",
-      datumTeren: datumTeren.value,
-      vremeTeren: vremeTeren.value,
-      ishodTeren: "",
-      radniNalog: false,
-      realizovan: false,
-      createdAt: Date.now(),
     });
-
-    await updateDoc(callRef, {
-      teren: true,
-      statusTerena: "zakazan",
-    });
-
-    closeScheduleModal();
-  });
+  }
 
   function openManualModal() {
-    manualModal.style.display = "block";
+    if (!manualModal) return;
+    manualModal.style.display = "flex";
     const now = new Date();
-    mDatumTeren.value = toYMD(now);
-    mVremeTeren.value = "10:00";
-    mIme.value = "";
-    mAdresa.value = "";
-    mTelefon.value = "";
-    mIshodTeren.value = "";
-    mRadniNalog.checked = false;
+    if (mDatumTeren) mDatumTeren.value = toYMD(now);
+    if (mVremeTeren) mVremeTeren.value = "10:00";
+    if (mIme) mIme.value = "";
+    if (mAdresa) mAdresa.value = "";
+    if (mTelefon) mTelefon.value = "";
+    if (mIshodTeren) mIshodTeren.value = "";
+    if (mRadniNalog) mRadniNalog.checked = false;
   }
 
   function closeManualModal() {
+    if (!manualModal) return;
     manualModal.style.display = "none";
   }
 
-  manualField.addEventListener("click", openManualModal);
-  cancelManualField.addEventListener("click", closeManualModal);
+  if (manualField) manualField.addEventListener("click", openManualModal);
+  if (cancelManualField) cancelManualField.addEventListener("click", closeManualModal);
 
-  saveManualField.addEventListener("click", async () => {
-    const imeVal = (mIme.value || "").trim();
-    const adresaVal = (mAdresa.value || "").trim();
-    const telefonVal = (mTelefon.value || "").trim();
-    const datumVal = mDatumTeren.value || "";
-    const vremeVal = mVremeTeren.value || "";
-    const ishodVal = (mIshodTeren.value || "").trim();
+  if (saveManualField) {
+    saveManualField.addEventListener("click", async () => {
+      const imeVal = (mIme?.value || "").trim();
+      const adresaVal = (mAdresa?.value || "").trim();
+      const telefonVal = (mTelefon?.value || "").trim();
+      const datumVal = mDatumTeren?.value || "";
+      const vremeVal = mVremeTeren?.value || "";
+      const ishodVal = (mIshodTeren?.value || "").trim();
 
-    if (!imeVal) return alert("Unesi ime i prezime.");
-    if (!adresaVal) return alert("Unesi adresu.");
-    if (!telefonVal) return alert("Unesi broj telefona.");
-    if (!datumVal) return alert("Unesi datum.");
-    if (!vremeVal) return alert("Unesi vreme.");
+      if (!imeVal) return alert("Unesi ime i prezime.");
+      if (!adresaVal) return alert("Unesi adresu.");
+      if (!telefonVal) return alert("Unesi broj telefona.");
+      if (!datumVal) return alert("Unesi datum.");
+      if (!vremeVal) return alert("Unesi vreme.");
 
-    await addDoc(collection(db, "fieldVisits"), {
-      callId: "",
-      ime: imeVal,
-      sifra: "",
-      telefon: telefonVal,
-      adresa: adresaVal,
-      ponudaAgent: "",
-      datumTeren: datumVal,
-      vremeTeren: vremeVal,
-      ishodTeren: ishodVal,
-      radniNalog: !!mRadniNalog.checked,
-      realizovan: false,
-      createdAt: Date.now(),
+      await addDoc(collection(db, "fieldVisits"), {
+        callId: "",
+        ime: imeVal,
+        sifra: "",
+        telefon: telefonVal,
+        adresa: adresaVal,
+        ponudaAgent: "",
+        datumTeren: datumVal,
+        vremeTeren: vremeVal,
+        ishodTeren: ishodVal,
+        radniNalog: !!mRadniNalog?.checked,
+        realizovan: false,
+        createdAt: Date.now(),
+      });
+
+      closeManualModal();
     });
+  }
 
-    closeManualModal();
+  window.addEventListener("click", (e) => {
+    if (e.target === modal) closeScheduleModal();
+    if (e.target === manualModal) closeManualModal();
   });
 
-  function bootSubscriptions() {
-    if (typeof unsubCalls === "function") unsubCalls();
-    if (typeof unsubFields === "function") unsubFields();
+  async function bootSubscriptions(prevUnsubCalls, prevUnsubFields, showChart, canvas, callsTableEl, fieldTableEl, statsContainerEl) {
+    if (typeof prevUnsubCalls === "function") prevUnsubCalls();
+    if (typeof prevUnsubFields === "function") prevUnsubFields();
 
     const { start, end } = monthRangeFromMonthKey(state.selectedMonth);
 
@@ -452,8 +500,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     unsubCalls = onSnapshot(callsQ, (snap) => {
       state.calls = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      renderCalls();
-      renderStats();
+      renderCalls(callsTableEl, sortBy, search);
+      renderStats(statsContainerEl);
+      renderMiniStats();
+      updateNavCounts();
     });
 
     const fieldsQ = query(
@@ -464,17 +514,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     unsubFields = onSnapshot(fieldsQ, (snap) => {
       state.fields = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      renderFields();
-      renderStats();
+      renderFields(fieldTableEl, fieldSearch);
+      renderStats(statsContainerEl);
+      renderMiniStats();
+      updateNavCounts();
     });
 
-    if (chartVisible) {
-      renderChartAllMonths().catch(() => {});
+    if (showChart) {
+      renderChartAllMonths(canvas).catch(() => {});
     }
   }
 
-  function sortCalls(arr) {
-    const mode = sortBy.value || "datumPoziva_desc";
+  function sortCalls(arr, sortSelect) {
+    const mode = sortSelect?.value || "datumPoziva_desc";
     const copy = [...arr];
     const get = (o, k) => String(o?.[k] ?? "").toLowerCase();
 
@@ -504,23 +556,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return copy;
   }
 
-  function getTerenBadge(call) {
-    if (call.statusTerena === "realizovan") {
-      return `<span class="badge ok">Realizovan</span>`;
-    }
-    if (call.statusTerena === "zakazan" || call.teren === true) {
-      return `<span class="badge ok">Zakazan</span>`;
-    }
-    if (call.statusTerena === "otkazan" || call.statusTerena === "nije_zakazano") {
-      return `<span class="badge no">Više nije zakazano</span>`;
-    }
-    return `<span class="badge">-</span>`;
-  }
+  function renderCalls(callsTableEl, sortSelect, searchInput) {
+    if (!callsTableEl) return;
 
-  function renderCalls() {
-    const q = (search.value || "").toLowerCase().trim();
-
+    const q = (searchInput?.value || "").toLowerCase().trim();
     let filtered = state.calls;
+
     if (q) {
       filtered = filtered.filter((c) => {
         const hay = [
@@ -532,19 +573,18 @@ document.addEventListener("DOMContentLoaded", () => {
           c.adresa,
           c.statusTerena
         ].join(" ").toLowerCase();
+
         return hay.includes(q);
       });
     }
 
-    const sorted = sortCalls(filtered);
+    const sorted = sortCalls(filtered, sortSelect);
+    callsTableEl.innerHTML = "";
 
-    callsTable.innerHTML = "";
     sorted.forEach((c) => {
-      const terenBadge = getTerenBadge(c);
-
       const statusBadge = c.statusPoziva
-        ? `<span class="badge ok">Čekirano</span>`
-        : `<span class="badge no">Nije</span>`;
+        ? `<span class="badge no">Čekirano</span>`
+        : `<span class="badge">Nije</span>`;
 
       const statusInput = state.isAdmin
         ? `<input type="checkbox" ${c.statusPoziva ? "checked" : ""} onchange="window._toggleStatusPoziva('${c.id}', this.checked)">`
@@ -558,32 +598,61 @@ document.addEventListener("DOMContentLoaded", () => {
         ? ``
         : `<button onclick="window._schedule('${c.id}')">Teren</button>`;
 
-      callsTable.innerHTML += `
-        <tr class="${c.statusPoziva ? "red" : (c.statusTerena === "realizovan" ? "green" : (c.teren ? "green" : ""))}">
+      callsTableEl.innerHTML += `
+        <tr class="${getCallRowClass(c)}">
           <td>${escapeHtml(c.ime || "")}</td>
           <td>${escapeHtml(c.sifra || "")}</td>
           <td>${escapeHtml(c.telefon || "")}</td>
+          <td>${escapeHtml(c.adresa || "")}</td>
           <td>${escapeHtml(c.ponudaAgent || "")}</td>
-          <td><input value="${escapeAttr(c.ishod || "")}" onchange="window._updateCallIshod('${c.id}', this.value)"></td>
-          <td style="text-align:center">${statusInput}</td>
-          <td>${terenBadge} ${statusBadge}</td>
           <td>
-            ${terenBtn}
-            ${delBtn}
+            <input value="${escapeAttr(c.ishod || "")}" onchange="window._updateCallIshod('${c.id}', this.value)">
+          </td>
+          <td style="text-align:center">
+            ${statusInput}
+            <div style="margin-top:6px">${statusBadge}</div>
+          </td>
+          <td>${getCallStatusBadge(c)}</td>
+          <td>
+            <div class="row">
+              ${terenBtn}
+              ${delBtn}
+            </div>
           </td>
         </tr>
       `;
     });
   }
 
-  function renderFields() {
-    fieldTable.innerHTML = "";
+  function renderFields(fieldTableEl, fieldSearchInput) {
+    if (!fieldTableEl) return;
 
-    const arr = [...state.fields].sort((a, b) => {
+    const q = (fieldSearchInput?.value || "").toLowerCase().trim();
+    let arr = [...state.fields];
+
+    if (q) {
+      arr = arr.filter((f) => {
+        const hay = [
+          f.ime,
+          f.adresa,
+          f.telefon,
+          f.datumTeren,
+          f.vremeTeren,
+          f.ishodTeren,
+          f.ponudaAgent
+        ].join(" ").toLowerCase();
+
+        return hay.includes(q);
+      });
+    }
+
+    arr.sort((a, b) => {
       const da = (a.datumTeren || "") + " " + (a.vremeTeren || "");
       const db = (b.datumTeren || "") + " " + (b.vremeTeren || "");
       return db.localeCompare(da);
     });
+
+    fieldTableEl.innerHTML = "";
 
     arr.forEach((f) => {
       const rn = !!f.radniNalog;
@@ -601,34 +670,49 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `<button class="danger" onclick="window._del('fieldVisits','${f.id}')">X</button>`
         : "";
 
-      fieldTable.innerHTML += `
-        <tr class="${realizovan ? "green" : ""}">
-          <td>
-            ${escapeHtml(f.ime || "")}
-            ${f.callId ? `<div class="small">vezan poziv</div>` : ``}
-          </td>
+      fieldTableEl.innerHTML += `
+        <tr class="${getFieldRowClass(f)}">
+          <td>${escapeHtml(f.ime || "")}</td>
           <td>${escapeHtml(f.adresa || "")}</td>
           <td>${escapeHtml(f.telefon || "")}</td>
           <td>${escapeHtml(f.datumTeren || "")}</td>
           <td>${escapeHtml(f.vremeTeren || "")}</td>
-          <td><input value="${escapeAttr(f.ishodTeren || "")}" onchange="window._updateFieldIshod('${f.id}', this.value)"></td>
+          <td>
+            <input value="${escapeAttr(f.ishodTeren || "")}" onchange="window._updateFieldIshod('${f.id}', this.value)">
+          </td>
           <td style="text-align:center">${rnCell}</td>
           <td style="text-align:center">${realizovanCell}</td>
+          <td>${f.callId ? `<span class="badge ok">Vezan poziv</span>` : `<span class="badge">Ručno</span>`}</td>
           <td>${delBtn}</td>
         </tr>
       `;
     });
   }
 
-  function renderStats() {
+  function renderMiniStats() {
+    const callsCount = state.calls.length;
+    const fieldsCount = state.fields.length;
+    const linkedFieldsCount = state.fields.filter(f => !!f.callId).length;
+    const realizedCount = state.fields.filter(f => !!f.realizovan).length;
+    const rnCount = state.fields.filter(f => !!f.radniNalog).length;
+    const conv = callsCount ? ((realizedCount / callsCount) * 100).toFixed(1) : "0.0";
+
+    setText("kpiCalls", callsCount);
+    setText("kpiScheduled", linkedFieldsCount);
+    setText("kpiRealized", realizedCount);
+    setText("kpiConv", `${conv}%`);
+
+    setText("kpiFields", fieldsCount);
+    setText("kpiLinkedFields", linkedFieldsCount);
+    setText("kpiRN", rnCount);
+  }
+
+  function renderStats(statsContainerEl) {
+    if (!statsContainerEl) return;
+
     const calls = state.calls;
     const fields = state.fields;
     const realizedFields = fields.filter(f => !!f.realizovan);
-
-    const callsCount = calls.length;
-    const fieldsCount = fields.length;
-    const realizedCount = realizedFields.length;
-    const conversion = callsCount ? ((realizedCount / callsCount) * 100).toFixed(1) : "0.0";
 
     const byAgent = {};
     AGENTS.forEach((a) => (byAgent[a] = { calls: 0, scheduled: 0, realized: 0 }));
@@ -644,46 +728,52 @@ document.addEventListener("DOMContentLoaded", () => {
       if (byAgent[a] && f.realizovan) byAgent[a].realized += 1;
     });
 
-    const agentBlocks = AGENTS.map((a) => {
+    const callsCount = calls.length;
+    const linkedFieldsCount = fields.filter(f => !!f.callId).length;
+    const realizedCount = realizedFields.length;
+    const conv = callsCount ? ((realizedCount / callsCount) * 100).toFixed(1) : "0.0";
+
+    setText("kpiCalls", callsCount);
+    setText("kpiScheduled", linkedFieldsCount);
+    setText("kpiRealized", realizedCount);
+    setText("kpiConv", `${conv}%`);
+
+    statsContainerEl.innerHTML = AGENTS.map((a) => {
       const ac = byAgent[a].calls;
       const as = byAgent[a].scheduled;
       const ar = byAgent[a].realized;
-      const conv = ac ? ((ar / ac) * 100).toFixed(1) : "0.0";
+      const agentConv = ac ? ((ar / ac) * 100).toFixed(1) : "0.0";
 
       return `
-        <div class="stat">
-          <div style="font-size:14px;opacity:.9">${escapeHtml(a)}</div>
-          <div style="font-size:18px;margin-top:6px">Pozivi: <b>${ac}</b></div>
-          <div style="font-size:18px">Zakazani tereni: <b>${as}</b></div>
-          <div style="font-size:18px">Realizovani: <b>${ar}</b></div>
-          <div style="font-size:14px;opacity:.9;margin-top:6px">Konverzija: <b>${conv}%</b></div>
+        <div class="agent-card">
+          <h4>${escapeHtml(a)}</h4>
+          <div class="small">Pozivi</div>
+          <div style="font-size:24px;font-weight:700;margin:4px 0 10px">${ac}</div>
+
+          <div class="small">Zakazani tereni</div>
+          <div style="font-size:20px;font-weight:700;margin:4px 0 10px">${as}</div>
+
+          <div class="small">Realizovani</div>
+          <div style="font-size:20px;font-weight:700;margin:4px 0 10px">${ar}</div>
+
+          <div class="small">Konverzija</div>
+          <div style="font-size:18px;font-weight:700">${agentConv}%</div>
         </div>
       `;
     }).join("");
-
-    statsEl.innerHTML = `
-      <div class="stat">
-        <div style="font-size:14px;opacity:.9">Prikaz (${state.selectedMonth})</div>
-        <div style="font-size:22px;margin-top:6px">Pozivi: <b>${callsCount}</b></div>
-        <div style="font-size:22px">Zakazani tereni: <b>${fieldsCount}</b></div>
-        <div style="font-size:22px">Realizovani: <b>${realizedCount}</b></div>
-        <div style="font-size:16px;opacity:.9;margin-top:6px">Konverzija: <b>${conversion}%</b></div>
-      </div>
-      ${agentBlocks}
-    `;
   }
 
-  async function renderChartAllMonths() {
+  async function renderChartAllMonths(canvas) {
+    if (!canvas) return;
+
     const snap = await getDocs(collection(db, "fieldVisits"));
     const counts = new Map();
 
     snap.forEach((d) => {
       const v = d.data();
       if (!v.realizovan) return;
-
       const k = monthKeyFromYMD(v.datumTeren);
       if (!k) return;
-
       counts.set(k, (counts.get(k) || 0) + 1);
     });
 
@@ -703,7 +793,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const values = last.map((k) => counts.get(k) || 0);
-    drawBarChart(chartCanvas, labels, values);
+    drawBarChart(canvas, labels, values);
+  }
+
+  function updateNavCounts() {
+    setText("navCallsCount", state.calls.length);
+    setText("navFieldsCount", state.fields.length);
+  }
+
+  function setText(id, value) {
+    const el = qs(id);
+    if (el) el.textContent = String(value);
+  }
+
+  function markActiveNav() {
+    document.querySelectorAll("[data-nav]").forEach((a) => {
+      a.classList.toggle("active", a.getAttribute("data-nav") === state.page);
+    });
   }
 
   window._schedule = (callId) => {
@@ -713,52 +819,42 @@ document.addEventListener("DOMContentLoaded", () => {
   window._updateCallIshod = async (id, val) => {
     const callRef = doc(db, "calls", id);
     const callSnap = await getDoc(callRef);
-
     if (!callSnap.exists()) {
       alert("Poziv više ne postoji.");
       return;
     }
-
     await updateDoc(callRef, { ishod: val });
   };
 
   window._toggleStatusPoziva = async (id, checked) => {
     if (!state.isAdmin) return;
-
     const callRef = doc(db, "calls", id);
     const callSnap = await getDoc(callRef);
-
     if (!callSnap.exists()) {
       alert("Poziv više ne postoji.");
       return;
     }
-
     await updateDoc(callRef, { statusPoziva: !!checked });
   };
 
   window._updateFieldIshod = async (id, val) => {
     const fieldRef = doc(db, "fieldVisits", id);
     const fieldSnap = await getDoc(fieldRef);
-
     if (!fieldSnap.exists()) {
       alert("Teren više ne postoji.");
       return;
     }
-
     await updateDoc(fieldRef, { ishodTeren: val });
   };
 
   window._toggleRadniNalog = async (id, checked) => {
     if (!state.isAdmin) return;
-
     const fieldRef = doc(db, "fieldVisits", id);
     const fieldSnap = await getDoc(fieldRef);
-
     if (!fieldSnap.exists()) {
       alert("Teren više ne postoji.");
       return;
     }
-
     await updateDoc(fieldRef, { radniNalog: !!checked });
   };
 
@@ -789,8 +885,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    if (chartVisible) {
-      renderChartAllMonths().catch(() => {});
+    if (!chartWrap?.classList.contains("hidden")) {
+      renderChartAllMonths(chartCanvas).catch(() => {});
     }
   };
 
@@ -819,16 +915,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    if (col === "calls") {
-      const callRef = doc(db, "calls", id);
-      const callSnap = await getDoc(callRef);
-
-      if (!callSnap.exists()) {
-        alert("Poziv više ne postoji.");
-        return;
-      }
-    }
-
     const ref = doc(db, col, id);
     const snap = await getDoc(ref);
 
@@ -839,8 +925,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     await deleteDoc(ref);
 
-    if (chartVisible) {
-      renderChartAllMonths().catch(() => {});
+    if (!chartWrap?.classList.contains("hidden")) {
+      renderChartAllMonths(chartCanvas).catch(() => {});
     }
   };
 });
