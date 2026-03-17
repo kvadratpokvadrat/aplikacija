@@ -346,6 +346,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const c = callSnap.data();
 
+    if (c.teren === true) {
+      alert("Za ovaj poziv je teren već zakazan.");
+      closeScheduleModal();
+      return;
+    }
+
     if (!(c.ime || "").trim()) return alert("Poziv nema ime i prezime.");
     if (!(c.sifra || "").trim()) return alert("Poziv nema šifru.");
     if (!(c.adresa || "").trim()) return alert("Poziv nema adresu.");
@@ -366,7 +372,10 @@ document.addEventListener("DOMContentLoaded", () => {
       createdAt: Date.now(),
     });
 
-    await updateDoc(callRef, { teren: true });
+    const callSnapAfter = await getDoc(callRef);
+    if (callSnapAfter.exists()) {
+      await updateDoc(callRef, { teren: true });
+    }
 
     closeScheduleModal();
   });
@@ -519,6 +528,10 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `<button class="danger" onclick="window._del('calls','${c.id}')">X</button>`
         : "";
 
+      const terenBtn = c.teren
+        ? ``
+        : `<button onclick="window._schedule('${c.id}')">Teren</button>`;
+
       callsTable.innerHTML += `
         <tr class="${c.teren ? "green" : ""}">
           <td>${escapeHtml(c.ime || "")}</td>
@@ -529,7 +542,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <td style="text-align:center">${statusInput}</td>
           <td>${terenBadge} ${statusBadge}</td>
           <td>
-            <button onclick="window._schedule('${c.id}')">Teren</button>
+            ${terenBtn}
             ${delBtn}
           </td>
         </tr>
@@ -655,21 +668,45 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window._updateCallIshod = async (id, val) => {
-    await updateDoc(doc(db, "calls", id), { ishod: val });
+    const callRef = doc(db, "calls", id);
+    const callSnap = await getDoc(callRef);
+    if (!callSnap.exists()) {
+      alert("Poziv više ne postoji.");
+      return;
+    }
+    await updateDoc(callRef, { ishod: val });
   };
 
   window._toggleStatusPoziva = async (id, checked) => {
     if (!state.isAdmin) return;
-    await updateDoc(doc(db, "calls", id), { statusPoziva: !!checked });
+    const callRef = doc(db, "calls", id);
+    const callSnap = await getDoc(callRef);
+    if (!callSnap.exists()) {
+      alert("Poziv više ne postoji.");
+      return;
+    }
+    await updateDoc(callRef, { statusPoziva: !!checked });
   };
 
   window._updateFieldIshod = async (id, val) => {
-    await updateDoc(doc(db, "fieldVisits", id), { ishodTeren: val });
+    const fieldRef = doc(db, "fieldVisits", id);
+    const fieldSnap = await getDoc(fieldRef);
+    if (!fieldSnap.exists()) {
+      alert("Teren više ne postoji.");
+      return;
+    }
+    await updateDoc(fieldRef, { ishodTeren: val });
   };
 
   window._toggleRadniNalog = async (id, checked) => {
     if (!state.isAdmin) return;
-    await updateDoc(doc(db, "fieldVisits", id), { radniNalog: !!checked });
+    const fieldRef = doc(db, "fieldVisits", id);
+    const fieldSnap = await getDoc(fieldRef);
+    if (!fieldSnap.exists()) {
+      alert("Teren više ne postoji.");
+      return;
+    }
+    await updateDoc(fieldRef, { radniNalog: !!checked });
   };
 
   window._del = async (col, id) => {
@@ -684,13 +721,32 @@ document.addEventListener("DOMContentLoaded", () => {
         const fieldData = fieldSnap.data();
 
         if (fieldData.callId) {
-          await updateDoc(doc(db, "calls", fieldData.callId), {
-            teren: false
-          });
+          const callRef = doc(db, "calls", fieldData.callId);
+          const callSnap = await getDoc(callRef);
+
+          if (callSnap.exists()) {
+            await updateDoc(callRef, { teren: false });
+          }
         }
       }
     }
 
-    await deleteDoc(doc(db, col, id));
+    if (col === "calls") {
+      const callRef = doc(db, "calls", id);
+      const callSnap = await getDoc(callRef);
+      if (!callSnap.exists()) {
+        alert("Poziv više ne postoji.");
+        return;
+      }
+    }
+
+    const ref = doc(db, col, id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      alert("Dokument više ne postoji.");
+      return;
+    }
+
+    await deleteDoc(ref);
   };
 });
