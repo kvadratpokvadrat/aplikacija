@@ -533,7 +533,7 @@ document.addEventListener("DOMContentLoaded", () => {
         : `<button onclick="window._schedule('${c.id}')">Teren</button>`;
 
       callsTable.innerHTML += `
-        <tr class="${c.teren ? "green" : ""}">
+        <tr class="${c.statusPoziva ? "red" : (c.teren ? "green" : "")}">
           <td>${escapeHtml(c.ime || "")}</td>
           <td>${escapeHtml(c.sifra || "")}</td>
           <td>${escapeHtml(c.telefon || "")}</td>
