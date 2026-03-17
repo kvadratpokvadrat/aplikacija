@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CRM Evidencija - Statistika</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="module" src="app.js?v=pro1"></script>
+</head>
+<body data-page="stats">
+
+  <div id="loginView" class="login-wrap">
+    <div class="login-card">
+      <h2>CRM Evidencija</h2>
+      <p>Prijavi se da pristupiš pozivima, terenima i statistici.</p>
+      <div class="stack">
+        <input id="email" placeholder="Email" autocomplete="username" />
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+        <button id="loginBtn">Login</button>
+        <div class="small">Admin može da briše, čekira status poziva, radni nalog i realizovan teren.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="appView" class="shell hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">CRM</div>
+        <div class="brand-text">
+          <b>Evidencija</b>
+          <span>Pozivi · Tereni · Statistika</span>
+        </div>
+      </div>
+
+      <div class="userbox">
+        <div id="whoami" class="small">—</div>
+      </div>
+
+      <nav class="nav">
+        <a href="calls.html" data-nav="calls">
+          <span class="label">📞 Pozivi</span>
+          <span id="navCallsCount" class="nav-badge">0</span>
+        </a>
+        <a href="fields.html" data-nav="fields">
+          <span class="label">🚗 Tereni</span>
+          <span id="navFieldsCount" class="nav-badge">0</span>
+        </a>
+        <a href="stats.html" data-nav="stats">
+          <span class="label">📊 Statistika</span>
+          <span class="nav-badge">→</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-actions">
+        <button id="logoutBtn" class="secondary" style="width:100%">Logout</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-row">
+          <div>
+            <h1 class="page-title">Statistika</h1>
+            <div class="page-subtitle">Ukupni pregled po mesecu i po agentima.</div>
+          </div>
+
+          <div class="row">
+            <label class="small">Mesec prikaza</label>
+            <input type="month" id="monthPick" />
+            <button id="monthToday" class="secondary">Danas</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="container">
+        <div class="grid grid-4" id="statsCards">
+          <div class="kpi">
+            <div class="kpi-label">Pozivi</div>
+            <div class="kpi-value" id="kpiCalls">0</div>
+            <div class="kpi-sub">Ukupan broj poziva u prikazu</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Zakazani tereni</div>
+            <div class="kpi-value" id="kpiScheduled">0</div>
+            <div class="kpi-sub">Ukupan broj zakazanih terena</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Realizovani tereni</div>
+            <div class="kpi-value" id="kpiRealized">0</div>
+            <div class="kpi-sub">Ukupan broj realizovanih terena</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Konverzija</div>
+            <div class="kpi-value" id="kpiConv">0.0%</div>
+            <div class="kpi-sub">Realizovani / pozivi</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:18px">
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <h3 style="margin:0">Pregled po agentima</h3>
+            </div>
+            <div class="toolbar-right">
+              <button id="toggleChart" class="secondary">Prikaži grafikon</button>
+            </div>
+          </div>
+
+          <div id="stats" class="stat-agent-grid"></div>
+        </div>
+
+        <div class="card" style="margin-top:18px">
+          <h3>Grafikon realizovanih terena</h3>
+          <div id="chartWrap" class="hidden" style="margin-top:12px">
+            <canvas id="chart" width="1000" height="300" style="width:100%;max-width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:16px"></canvas>
+            <div class="small" style="margin-top:8px">Grafikon broji samo realizovane terene, po mesecima.</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+</body>
+</html>
