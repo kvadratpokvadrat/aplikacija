@@ -899,19 +899,40 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `<button class="btn btn-danger-table" onclick="window._del('fieldVisits','${f.id}')">X</button>`
         : "";
 
-      fieldTable.innerHTML += `
-        <tr data-id="${f.id}" class="${getFieldRowClass(f)}">
-          <td>${escapeHtml(f.ime || "")}</td>
-          <td>${escapeHtml(f.adresa || "")}</td>
-          <td>${escapeHtml(f.telefon || "")}</td>
-          <td>${escapeHtml(f.datumTeren || "")}</td>
-          <td>${escapeHtml(f.vremeTeren || "")}</td>
-          <td><input class="inline-input" value="${escapeAttr(f.ishodTeren || "")}" onchange="window._updateFieldIshod('${f.id}', this.value)"></td>
-          <td class="checkbox-center">${rnCell}</td>
-          <td class="checkbox-center">${realizovanCell}</td>
-          <td>${f.callId ? `<span class="badge badge-success">Vezan poziv</span>` : `<span class="badge">Ručno</span>`}</td>
-          <td>${delBtn}</td>
-        </tr>
+   fieldTable.innerHTML += `
+  <tr data-id="${f.id}" class="${getFieldRowClass(f)}">
+    <td>${escapeHtml(f.ime || "")}</td>
+    <td>${escapeHtml(f.adresa || "")}</td>
+    <td>${escapeHtml(f.telefon || "")}</td>
+    <td>${escapeHtml(f.datumTeren || "")}</td>
+    <td>${escapeHtml(f.vremeTeren || "")}</td>
+
+    <td>
+      <input 
+        class="inline-input" 
+        value="${escapeAttr(f.ishodTeren || "")}" 
+        onchange="window._updateFieldIshod('${f.id}', this.value)">
+    </td>
+
+    <td class="checkbox-center">
+      ${rnCell}
+    </td>
+
+    <td class="checkbox-center">
+      ${realizovanCell}
+    </td>
+
+    <td class="checkbox-center">
+      ${f.callId 
+        ? `<span class="badge badge-success">Vezan poziv</span>` 
+        : `<span class="badge">Ručno</span>`}
+    </td>
+
+    <td class="checkbox-center">
+      ${delBtn}
+    </td>
+  </tr>
+`;
       `;
     });
 
