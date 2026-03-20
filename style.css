@@ -461,6 +461,7 @@ tbody td{
   border-bottom:1px solid #eef3f8;
   vertical-align:middle;
   white-space:nowrap;
+  transition:background .15s ease;
 }
 
 tbody tr:hover td{
@@ -492,15 +493,79 @@ tbody tr.row-focus td{
 }
 
 .checkbox-center{
-  display:flex;
-  justify-content:center;
-  align-items:center;
+  text-align:center;
 }
 
 .empty-state{
   padding:26px 16px;
   text-align:center;
   color:var(--muted);
+}
+
+/* TABLE FIX */
+
+th:nth-child(7),
+th:nth-child(8),
+th:nth-child(9),
+th:nth-child(10),
+td:nth-child(7),
+td:nth-child(8),
+td:nth-child(9),
+td:nth-child(10){
+  text-align:center;
+}
+
+th:nth-child(7),
+td:nth-child(7),
+th:nth-child(8),
+td:nth-child(8){
+  width:110px;
+}
+
+th:nth-child(9),
+td:nth-child(9){
+  width:160px;
+}
+
+th:nth-child(10),
+td:nth-child(10){
+  width:90px;
+}
+
+td:nth-child(7) input[type="checkbox"],
+td:nth-child(8) input[type="checkbox"]{
+  margin:0 auto;
+  display:block;
+  width:16px;
+  height:16px;
+  padding:0;
+}
+
+td:nth-child(9) .badge{
+  margin:0 auto;
+}
+
+.btn-delete{
+  width:36px;
+  min-width:36px;
+  height:36px;
+  padding:0;
+  display:block;
+  margin:0 auto;
+  border:none;
+  border-radius:12px;
+  background:#f3f4f6;
+  color:#111827;
+  font-size:22px;
+  line-height:36px;
+  cursor:pointer;
+  transition:background .15s ease, color .15s ease, transform .15s ease;
+}
+
+.btn-delete:hover{
+  background:#e5e7eb;
+  color:#dc2626;
+  transform:scale(1.04);
 }
 
 /* BADGES */
@@ -604,6 +669,14 @@ tbody tr.row-focus td{
   gap:10px;
   color:var(--text);
   font-size:14px;
+}
+
+.checkbox-line input[type="checkbox"]{
+  width:16px;
+  height:16px;
+  margin:0;
+  padding:0;
+  flex:0 0 auto;
 }
 
 /* NOTIFICATIONS */
@@ -903,85 +976,4 @@ tbody tr.row-focus td{
   .calendar-grid{
     grid-template-columns:repeat(2, 1fr);
   }
-  /* SREDJIVANJE KOLONA: RADNI NALOG / REALIZOVAN / VEZA / AKCIJA */
-
-th:nth-child(7),
-th:nth-child(8),
-th:nth-child(9),
-th:nth-child(10),
-td:nth-child(7),
-td:nth-child(8),
-td:nth-child(9),
-td:nth-child(10){
-  text-align:center;
 }
-
-th:nth-child(7),
-td:nth-child(7),
-th:nth-child(8),
-td:nth-child(8){
-  width:110px;
-}
-
-th:nth-child(9),
-td:nth-child(9){
-  width:160px;
-}
-
-th:nth-child(10),
-td:nth-child(10){
-  width:90px;
-}
-
-.cell-center{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  min-height:44px;
-  width:100%;
-}
-
-.cell-badge{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  min-height:44px;
-  width:100%;
-}
-
-.cell-action{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  min-height:44px;
-  width:100%;
-}
-
-input[type="checkbox"]{
-  margin:0;
-  width:16px;
-  height:16px;
-  display:block;
-}
-
-.btn-delete{
-  width:44px;
-  min-width:44px;
-  height:44px;
-  padding:0;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border:none;
-  border-radius:14px;
-  background:#f3f4f6;
-  color:#111827;
-  font-size:24px;
-  line-height:1;
-  cursor:pointer;
-}
-
-.btn-delete:hover{
-  background:#e5e7eb;
-}
-
