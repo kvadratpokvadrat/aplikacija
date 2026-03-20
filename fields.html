@@ -126,16 +126,22 @@
         </div>
 
         <div class="card">
-          <div class="card-toolbar">
-            <div>
-              <h2>Kalendar terena</h2>
-              <div class="card-subtitle">Pregled zakazanih terena po danima za izabrani mesec.</div>
-            </div>
-          </div>
+  <div class="card-toolbar">
+    <div>
+      <h2>Kalendar terena</h2>
+      <div class="card-subtitle">Pregled zakazanih terena po danima za izabrani mesec.</div>
+    </div>
 
-          <div id="calendarHead" class="calendar-head"></div>
-          <div id="calendar" class="calendar-grid"></div>
-        </div>
+    <div class="toolbar-actions">
+      <button id="toggleCalendar" class="btn btn-secondary" type="button">Prikaži kalendar</button>
+    </div>
+  </div>
+
+  <div id="calendarWrap" class="hidden">
+    <div id="calendarHead" class="calendar-head"></div>
+    <div id="calendar" class="calendar-grid"></div>
+  </div>
+</div>
 
         <div class="card">
           <div class="card-toolbar">
