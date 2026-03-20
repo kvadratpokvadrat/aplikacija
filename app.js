@@ -493,6 +493,22 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+if (toggleCalendar) {
+  toggleCalendar.addEventListener("click", () => {
+    calendarVisible = !calendarVisible;
+
+    if (calendarWrap) {
+      calendarWrap.classList.toggle("hidden", !calendarVisible);
+    }
+
+    toggleCalendar.textContent = calendarVisible ? "Sakrij kalendar" : "Prikaži kalendar";
+
+    if (calendarVisible) {
+      renderCalendar();
+    }
+  });
+}
+  
   if (addCall) {
     addCall.addEventListener("click", async () => {
       const imeVal = (ime?.value || "").trim();
