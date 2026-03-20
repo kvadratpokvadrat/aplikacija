@@ -842,110 +842,99 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function renderFields() {
-    if (!fieldTable) return;
+function renderFields() {
+  if (!fieldTable) return;
 
-    const q = (fieldSearch?.value || "").toLowerCase().trim();
-    let arr = [...state.fields];
+  const q = (fieldSearch?.value || "").toLowerCase().trim();
+  let arr = [...state.fields];
 
-    if (q) {
-      arr = arr.filter((f) => {
-        const hay = [
-          f.ime,
-          f.adresa,
-          f.telefon,
-          f.datumTeren,
-          f.vremeTeren,
-          f.ishodTeren,
-          f.ponudaAgent,
-        ]
-          .join(" ")
-          .toLowerCase();
+  if (q) {
+    arr = arr.filter((f) => {
+      const hay = [
+        f.ime,
+        f.adresa,
+        f.telefon,
+        f.datumTeren,
+        f.vremeTeren,
+        f.ishodTeren,
+        f.ponudaAgent,
+      ]
+        .join(" ")
+        .toLowerCase();
 
-        return hay.includes(q);
-      });
-    }
-
-    arr.sort((a, b) => {
-      const da = (a.datumTeren || "") + " " + (a.vremeTeren || "");
-      const db = (b.datumTeren || "") + " " + (b.vremeTeren || "");
-      return db.localeCompare(da);
+      return hay.includes(q);
     });
-
-    fieldTable.innerHTML = "";
-
-    if (!arr.length) {
-      fieldTable.innerHTML = `<tr><td colspan="10"><div class="empty-state">Nema terena za prikaz.</div></td></tr>`;
-      return;
-    }
-
-    arr.forEach((f) => {
-      const rn = !!f.radniNalog;
-      const realizovan = !!f.realizovan;
-
-      const rnCell = state.isAdmin
-        ? `<input type="checkbox" ${rn ? "checked" : ""} onchange="window._toggleRadniNalog('${f.id}', this.checked)">`
-        : rn
-          ? `<span class="badge badge-success">DA</span>`
-          : `<span class="badge">NE</span>`;
-
-      const realizovanCell = state.isAdmin
-        ? `<input type="checkbox" ${realizovan ? "checked" : ""} onchange="window._toggleRealizovan('${f.id}', this.checked)">`
-        : realizovan
-          ? `<span class="badge badge-success">DA</span>`
-          : `<span class="badge">NE</span>`;
-
-      const delBtn = state.isAdmin
-        ? `<button class="btn btn-danger-table" onclick="window._del('fieldVisits','${f.id}')">X</button>`
-        : "";
-
-   fieldTable.innerHTML += `
-  <tr data-id="${f.id}" class="${getFieldRowClass(f)}">
-    <td>${escapeHtml(f.ime || "")}</td>
-    <td>${escapeHtml(f.adresa || "")}</td>
-    <td>${escapeHtml(f.telefon || "")}</td>
-    <td>${escapeHtml(f.datumTeren || "")}</td>
-    <td>${escapeHtml(f.vremeTeren || "")}</td>
-
-    <td>
-      <input 
-        class="inline-input" 
-        value="${escapeAttr(f.ishodTeren || "")}" 
-        onchange="window._updateFieldIshod('${f.id}', this.value)">
-    </td>
-
-    <td class="checkbox-center">
-      ${rnCell}
-    </td>
-
-    <td class="checkbox-center">
-      ${realizovanCell}
-    </td>
-
-    <td class="checkbox-center">
-      ${f.callId 
-        ? `<span class="badge badge-success">Vezan poziv</span>` 
-        : `<span class="badge">Ručno</span>`}
-    </td>
-
-    <td class="checkbox-center">
-      ${delBtn}
-    </td>
-  </tr>
-`;
-      `;
-    });
-
-    const focusId = localStorage.getItem(FOCUS_FIELD_KEY);
-    if (focusId) {
-      const row = document.querySelector(`[data-id="${focusId}"]`);
-      if (row) {
-        row.scrollIntoView({ behavior: "smooth", block: "center" });
-        row.classList.add("row-focus");
-      }
-      localStorage.removeItem(FOCUS_FIELD_KEY);
-    }
   }
+
+  arr.sort((a, b) => {
+    const da = (a.datumTeren || "") + " " + (a.vremeTeren || "");
+    const db = (b.datumTeren || "") + " " + (b.vremeTeren || "");
+    return db.localeCompare(da);
+  });
+
+  fieldTable.innerHTML = "";
+
+  if (!arr.length) {
+    fieldTable.innerHTML = `<tr><td colspan="10"><div class="empty-state">Nema terena za prikaz.</div></td></tr>`;
+    return;
+  }
+
+  arr.forEach((f) => {
+    const rn = !!f.radniNalog;
+    const realizovan = !!f.realizovan;
+
+    const rnCell = state.isAdmin
+      ? `<input type="checkbox" ${rn ? "checked" : ""} onchange="window._toggleRadniNalog('${f.id}', this.checked)">`
+      : rn
+        ? `<span class="badge badge-success">DA</span>`
+        : `<span class="badge">NE</span>`;
+
+    const realizovanCell = state.isAdmin
+      ? `<input type="checkbox" ${realizovan ? "checked" : ""} onchange="window._toggleRealizovan('${f.id}', this.checked)">`
+      : realizovan
+        ? `<span class="badge badge-success">DA</span>`
+        : `<span class="badge">NE</span>`;
+
+    const delBtn = state.isAdmin
+      ? `<button class="btn btn-danger-table" onclick="window._del('fieldVisits','${f.id}')">X</button>`
+      : "";
+
+    fieldTable.innerHTML += `
+      <tr data-id="${f.id}" class="${getFieldRowClass(f)}">
+        <td>${escapeHtml(f.ime || "")}</td>
+        <td>${escapeHtml(f.adresa || "")}</td>
+        <td>${escapeHtml(f.telefon || "")}</td>
+        <td>${escapeHtml(f.datumTeren || "")}</td>
+        <td>${escapeHtml(f.vremeTeren || "")}</td>
+        <td>
+          <input
+            class="inline-input"
+            value="${escapeAttr(f.ishodTeren || "")}"
+            onchange="window._updateFieldIshod('${f.id}', this.value)"
+          >
+        </td>
+        <td class="checkbox-center">${rnCell}</td>
+        <td class="checkbox-center">${realizovanCell}</td>
+        <td class="checkbox-center">
+          ${f.callId
+            ? `<span class="badge badge-success">Vezan poziv</span>`
+            : `<span class="badge">Ručno</span>`}
+        </td>
+        <td class="checkbox-center">${delBtn}</td>
+      </tr>
+    `;
+  });
+
+  const focusId = localStorage.getItem(FOCUS_FIELD_KEY);
+  if (focusId) {
+    const row = document.querySelector(`[data-id="${focusId}"]`);
+    if (row) {
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+      row.classList.add("row-focus");
+    }
+    localStorage.removeItem(FOCUS_FIELD_KEY);
+  }
+}
 
   function renderMiniStats() {
     const callsCount = state.calls.length;
