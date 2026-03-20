@@ -903,4 +903,85 @@ tbody tr.row-focus td{
   .calendar-grid{
     grid-template-columns:repeat(2, 1fr);
   }
+  /* SREDJIVANJE KOLONA: RADNI NALOG / REALIZOVAN / VEZA / AKCIJA */
+
+th:nth-child(7),
+th:nth-child(8),
+th:nth-child(9),
+th:nth-child(10),
+td:nth-child(7),
+td:nth-child(8),
+td:nth-child(9),
+td:nth-child(10){
+  text-align:center;
 }
+
+th:nth-child(7),
+td:nth-child(7),
+th:nth-child(8),
+td:nth-child(8){
+  width:110px;
+}
+
+th:nth-child(9),
+td:nth-child(9){
+  width:160px;
+}
+
+th:nth-child(10),
+td:nth-child(10){
+  width:90px;
+}
+
+.cell-center{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:44px;
+  width:100%;
+}
+
+.cell-badge{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:44px;
+  width:100%;
+}
+
+.cell-action{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:44px;
+  width:100%;
+}
+
+input[type="checkbox"]{
+  margin:0;
+  width:16px;
+  height:16px;
+  display:block;
+}
+
+.btn-delete{
+  width:44px;
+  min-width:44px;
+  height:44px;
+  padding:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:none;
+  border-radius:14px;
+  background:#f3f4f6;
+  color:#111827;
+  font-size:24px;
+  line-height:1;
+  cursor:pointer;
+}
+
+.btn-delete:hover{
+  background:#e5e7eb;
+}
+
