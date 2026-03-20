@@ -397,13 +397,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const chartWrap = qs("chartWrap");
   const chartCanvas = qs("chart");
 
+  const toggleCalendar = qs("toggleCalendar");
+  const calendarWrap = qs("calendarWrap");
+
   const notifBtn = qs("notifBtn");
   const notifDropdown = qs("notifDropdown");
 
   let unsubCalls = null;
   let unsubFields = null;
   let chartVisible = false;
-
+  let calendarVisible = false;
+  
   markActiveNav(state.page);
 
   if (monthPick) monthPick.value = state.selectedMonth;
